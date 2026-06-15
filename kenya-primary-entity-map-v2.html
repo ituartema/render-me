@@ -1,0 +1,143 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kenya primary — entity configuration map</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#fff;--bg2:#f8f7f5;--bg3:#f1efe9;--border:#e5e3dc;--border2:#d4d1c8;--text:#1a1916;--text2:#5a5850;--text3:#9a9790;--accent:#8a6f3e;}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;line-height:1.55;}
+.page{max-width:1080px;margin:0 auto;padding:40px 32px 72px;}
+.lead{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);}
+h1{font-size:26px;font-weight:600;margin:6px 0 4px;}
+.sub{color:var(--text2);font-size:14px;margin:0 0 4px;}
+.hrow{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:12px;border-bottom:1px solid var(--border);padding-bottom:16px;margin-bottom:22px;}
+.meta{font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);text-align:right;line-height:1.8;}
+.columns{display:grid;grid-template-columns:1fr 360px;gap:20px;align-items:start;}
+.diagram-wrap{position:sticky;top:24px;background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:10px;}
+svg{width:100%;display:block;}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-family:'DM Mono',monospace;font-size:10px;color:var(--text2);padding:8px 4px 2px;}
+.legend span{display:inline-flex;align-items:center;gap:6px;}
+.sw{width:12px;height:12px;border-radius:3px;border:1px solid;}
+.th{font-family:'Syne',sans-serif;font-size:13px;font-weight:500;}
+.ts{font-family:'Syne',sans-serif;font-size:11px;font-weight:400;}
+.glabel{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;fill:var(--text3);}
+.node{cursor:pointer;}
+.node rect{transition:opacity .15s;}
+.c-teal rect{fill:#e1f5ee;stroke:#0f6e56;}.c-teal .th{fill:#085041;}.c-teal .ts{fill:#0f6e56;}
+.c-gray rect{fill:#f1efe8;stroke:#5f5e5a;}.c-gray .th{fill:#2c2c2a;}.c-gray .ts{fill:#5f5e5a;}
+.c-coral rect{fill:#faece7;stroke:#993c1d;}.c-coral .th{fill:#4a1b0c;}.c-coral .ts{fill:#993c1d;}
+.node.active rect{stroke-width:1.75;}
+.dim{opacity:.3;}
+.heredge{stroke:#9a9790;stroke-width:.7;fill:none;}
+.refedge{stroke:#8a6f3e;stroke-width:1;stroke-dasharray:5 4;fill:none;display:none;}
+.refedge.show{display:block;}
+.panel{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;min-height:220px;}
+.ph{display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--text3);font-size:13px;text-align:center;gap:6px;padding:40px 10px;}
+.ptag{display:inline-block;font-family:'DM Mono',monospace;font-size:10px;padding:3px 8px;border-radius:6px;text-transform:uppercase;letter-spacing:.05em;}
+.pname{font-size:18px;font-weight:600;margin:8px 0 2px;}
+.pkind{font-family:'DM Mono',monospace;font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px;}
+.psec{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin:14px 0 6px;}
+.frow{display:flex;justify-content:space-between;gap:10px;font-size:12px;padding:3px 0;border-bottom:1px dashed var(--border);}
+.fname{color:var(--text);}
+.ftype{color:var(--text2);font-family:'DM Mono',monospace;font-size:10px;text-align:right;white-space:nowrap;}
+.reqd{color:var(--accent);}
+.reflist{font-size:12px;color:var(--text2);}
+.reflist b{color:var(--text);font-weight:500;}
+.info-flag{margin-top:11px;padding:9px 13px;background:#fdf6ee;border:1px solid #e8d4aa;border-radius:6px;font-size:12px;color:#7a5a28;line-height:1.6;}
+.info-flag strong{color:#5a3e18;}
+.notes{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:16px;margin-top:16px;}
+.notes h3{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin:0 0 10px;font-weight:500;}
+.notes li{font-size:12px;color:var(--text2);margin-bottom:8px;list-style:none;padding-left:14px;text-indent:-14px;}
+.notes li b{color:var(--text);font-weight:500;}
+footer{display:flex;justify-content:space-between;font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);margin-top:32px;border-top:1px solid var(--border);padding-top:14px;}
+@media (max-width:780px){.columns{grid-template-columns:1fr;}.diagram-wrap{position:static;}}
+</style></head><body>
+<div class="page">
+<div class="hrow"><div>
+<div class="lead">Trellis · Kenya primary test org</div>
+<h1>Entity configuration map</h1>
+<p class="sub">The corrected Kenya primary configuration, plus the proposed Grades, Teachers, Classes and Learners. Click any entity to see its fields and reference links.</p>
+</div><div class="meta">Date / 8 Jun 2026<br>Status / draft for engineers<br>Scope / load-test org</div></div>
+<div class="columns">
+<div class="diagram-wrap">
+<div id="svghost"></div>
+<div class="legend">
+<span><span class="sw" style="background:#e1f5ee;border-color:#0f6e56"></span>hierarchy entity</span>
+<span><span class="sw" style="background:#f1efe8;border-color:#5f5e5a"></span>referenced type</span>
+<span><span class="sw" style="background:#faece7;border-color:#993c1d"></span>proposed (new)</span>
+<span><span style="display:inline-block;width:16px;border-top:1px dashed #8a6f3e"></span>reference (on click)</span>
+</div>
+</div>
+<div>
+<div class="panel" id="panel"><div class="ph"><div>&larr;</div><div>Click any entity to see its configuration and what it references.</div></div></div>
+<div class="notes"><h3>Open decisions</h3>
+<ul>
+<li><b>Grade</b> is modelled as an entity (not an enum), seeded Grade 1–3.</li>
+<li><b>Teachers</b> are User-kind but role-less — confirm they sit outside Console access control.</li>
+<li><b>Schools</b> keep redundant geography (Sub-County + Ward + Zone) to mirror production.</li>
+<li><b>Nigeria</b> per-subject teaching needs a Teaching Assignment join entity — parked, not in this Kenya test.</li>
+</ul></div>
+</div>
+</div>
+<footer><span>Kenya primary load-test config</span><span>Maru · Trellis</span></footer>
+</div>
+<script>
+const DATA={"E": {"Counties": {"label": "Counties", "kind": "Generic", "color": "teal", "x": 150, "y": 30, "w": 104, "h": 38, "fields": [["Name", "Text", null, true], ["Regional Manager", "Reference", "EIDU Staff", false]], "label1": "{Name}", "label2": "{Regional Manager}"}, "SubCounties": {"label": "Sub-Counties", "kind": "Generic", "color": "teal", "x": 80, "y": 98, "w": 116, "h": 38, "fields": [["Name", "Text", null, true], ["County", "Reference", "Counties", false], ["Quality Assurance Officer", "Reference", "Government Officials", false]], "label1": "{Name}", "label2": "{County}"}, "Units": {"label": "Units", "kind": "Generic", "color": "teal", "x": 246, "y": 98, "w": 96, "h": 38, "fields": [["Name", "Text", null, true], ["Lead EIDU Officer", "Reference", "EIDU Staff", false], ["Associate EIDU Officer", "Reference", "EIDU Staff", false], ["County", "Reference", "Counties", false]], "label1": "{Name}", "label2": "EO: {Lead EIDU Officer}"}, "Wards": {"label": "Wards", "kind": "Generic", "color": "teal", "x": 16, "y": 166, "w": 80, "h": 36, "fields": [["Name", "Text", null, true], ["Sub-County", "Reference", "Sub-Counties", false]], "label1": "{Name}", "label2": "{Sub-County}"}, "Zones": {"label": "Zones", "kind": "Generic", "color": "teal", "x": 150, "y": 166, "w": 84, "h": 36, "fields": [["Name", "Text", null, true], ["Unit", "Reference", "Units", false], ["Sub-County", "Reference", "Sub-Counties", false], ["CSO", "Reference", "Government Officials", false]], "label1": "{Name}", "label2": "CSO: {CSO} \u2014 Unit: {Unit}"}, "Townhalls": {"label": "Townhalls", "kind": "Generic", "color": "teal", "x": 248, "y": 166, "w": 100, "h": 36, "fields": [["Name", "Text", null, true], ["Sub-County", "Reference", "Sub-Counties", false], ["Date", "Date", null, false]], "label1": "{Name}", "label2": "{Sub-County}", "flag": "Live config has a raw GUID hard-coded into the second label line instead of a field token \u2014 worth fixing."}, "Schools": {"label": "Schools", "kind": "School", "color": "teal", "x": 70, "y": 240, "w": 130, "h": 48, "fields": [["Name", "Text", null, true], ["Sub-County", "Reference", "Sub-Counties", true], ["Zone", "Reference", "Zones", false], ["School Type", "Reference", "School Types", true], ["Curricular Service", "Reference", "Curricular Service", false], ["Treatment Group", "Reference", "Treatment Groups", false], ["Townhall", "Reference", "Townhalls", false], ["Ward", "Reference", "Wards", false], ["Deputy Headteacher", "Reference", "Government Officials", false], ["Device Count", "Number", null, false], ["Device Count Comment", "Text", null, false], ["Joined EIDU in", "Number", null, false]], "label1": "{Name}", "label2": "{Sub-County}", "flag": "Geography is denormalised: references Sub-County (required) plus Ward, Zone and Townhall, so the same Sub-County is reachable several ways. Kept deliberately to mirror production."}, "Teachers": {"label": "Teachers", "kind": "User", "color": "coral", "x": 30, "y": 330, "w": 104, "h": 48, "fields": [["Name", "Text", null, true], ["School", "Reference", "Schools", true], ["Start of Tenure", "Date", null, false], ["End of Tenure", "Date", null, false]], "label1": "{Name}", "label2": "{School}", "note": "New. User kind, so teachers get accounts. Left role-less: they are app users who don't operate the Console. If they ever need Console scoping, add a Teacher Roles lookup mirroring EIDU / Government Roles."}, "Classes": {"label": "Classes", "kind": "Generic", "color": "coral", "x": 170, "y": 330, "w": 110, "h": 48, "fields": [["Name", "Text", null, true], ["School", "Reference", "Schools", true], ["Grade", "Reference", "Grades", true], ["Class Teacher", "Reference", "Teachers", false]], "label1": "{Name}", "label2": "{Grade} \u2014 {School}", "note": "New. Kenya homeroom model: one class, one grade, one class teacher. Class Teacher left optional so a class can exist before it is staffed. Nigeria's per-subject case would need a separate Teaching Assignment join entity \u2014 parked, not built here."}, "Grades": {"label": "Grades", "kind": "Generic", "color": "coral", "x": 388, "y": 352, "w": 114, "h": 40, "fields": [["Name", "Text", null, true]], "label1": "{Name}", "label2": "", "note": "New leaf lookup, same shape as Subjects. Seed Grade 1, Grade 2, Grade 3."}, "Learners": {"label": "Learners", "kind": "Generic", "color": "coral", "x": 170, "y": 410, "w": 110, "h": 48, "fields": [["Name", "Text", null, true], ["Class", "Reference", "Classes", true]], "label1": "{Name}", "label2": "{Class}", "note": "New, no accounts. Highest-volume entity \u2014 the load surface. Single parent: School and Grade are derived by walking Class, not stored."}, "EIDURoles": {"label": "EIDU Roles", "kind": "Generic", "color": "gray", "x": 388, "y": 50, "w": 114, "h": 40, "fields": [["Name", "Text", null, false]], "label1": "{Name}", "label2": ""}, "EIDUStaff": {"label": "EIDU Staff", "kind": "User", "color": "gray", "x": 518, "y": 50, "w": 114, "h": 40, "fields": [["Name", "Text", null, false], ["Role", "Reference", "EIDU Roles", false], ["Start of Tenure", "Date", null, false], ["End of Tenure", "Date", null, false]], "label1": "{Name}", "label2": ""}, "GovRoles": {"label": "Government Roles", "kind": "Generic", "color": "gray", "x": 388, "y": 104, "w": 114, "h": 40, "disp": ["Government", "Roles"], "fields": [["Name", "Text", null, false]], "label1": "{Name}", "label2": ""}, "GovOfficials": {"label": "Government Officials", "kind": "User", "color": "gray", "x": 518, "y": 104, "w": 114, "h": 40, "disp": ["Government", "Officials"], "fields": [["Name", "Text", null, false], ["Role", "Reference", "Government Roles", false], ["Start Date EIDU", "Date", null, false], ["End Date EIDU", "Date", null, false], ["Contact Email", "Text", null, false], ["Contact Phone Number", "Text", null, false]], "label1": "{Name}", "label2": ""}, "Subjects": {"label": "Subjects", "kind": "Generic", "color": "gray", "x": 388, "y": 170, "w": 114, "h": 40, "fields": [["Name", "Text", null, false]], "label1": "{Name}", "label2": ""}, "CurricularService": {"label": "Curricular Service", "kind": "Generic", "color": "gray", "x": 518, "y": 170, "w": 114, "h": 40, "disp": ["Curricular", "Service"], "fields": [["Name", "Text", null, false], ["Subject", "Reference", "Subjects", false], ["Comments", "Text", null, false]], "label1": "{Name}", "label2": "{Subject}"}, "SchoolTypes": {"label": "School Types", "kind": "Generic", "color": "gray", "x": 388, "y": 224, "w": 114, "h": 40, "fields": [["Name", "Text", null, false]], "label1": "{Name}", "label2": ""}, "TreatmentGroups": {"label": "Treatment Groups", "kind": "Generic", "color": "gray", "x": 518, "y": 224, "w": 114, "h": 40, "disp": ["Treatment", "Groups"], "fields": [["Name", "Text", null, false], ["Description", "Text", null, false]], "label1": "{Name}", "label2": ""}, "FormAvailability": {"label": "Form Availability", "kind": "Generic", "color": "gray", "x": 388, "y": 290, "w": 114, "h": 40, "disp": ["Form", "Availability"], "fields": [["Name", "Text", null, false]], "label1": "{Name}", "label2": ""}, "Forms": {"label": "Forms", "kind": "Form", "color": "gray", "x": 518, "y": 290, "w": 114, "h": 40, "fields": [["Name", "Text", null, false], ["Form Availability", "Reference", "Form Availability", false], ["Form Description", "Text", null, false], ["Form Owner", "Reference", "EIDU Staff", false], ["Last modified", "Date", null, false]], "label1": "{Name}", "label2": ""}}, "hier": [["Counties", "SubCounties"], ["Counties", "Units"], ["SubCounties", "Wards"], ["SubCounties", "Zones"], ["SubCounties", "Townhalls"], ["Units", "Zones"], ["SubCounties", "Schools"], ["Schools", "Teachers"], ["Schools", "Classes"], ["Classes", "Learners"]], "ref": [{"frm": "Counties", "to": "EIDUStaff", "field": "Regional Manager", "req": false}, {"frm": "SubCounties", "to": "GovOfficials", "field": "Quality Assurance Officer", "req": false}, {"frm": "Units", "to": "EIDUStaff", "field": "Lead EIDU Officer", "req": false}, {"frm": "Units", "to": "EIDUStaff", "field": "Associate EIDU Officer", "req": false}, {"frm": "Zones", "to": "GovOfficials", "field": "CSO", "req": false}, {"frm": "Schools", "to": "Zones", "field": "Zone", "req": false}, {"frm": "Schools", "to": "SchoolTypes", "field": "School Type", "req": true}, {"frm": "Schools", "to": "CurricularService", "field": "Curricular Service", "req": false}, {"frm": "Schools", "to": "TreatmentGroups", "field": "Treatment Group", "req": false}, {"frm": "Schools", "to": "Townhalls", "field": "Townhall", "req": false}, {"frm": "Schools", "to": "Wards", "field": "Ward", "req": false}, {"frm": "Schools", "to": "GovOfficials", "field": "Deputy Headteacher", "req": false}, {"frm": "Classes", "to": "Grades", "field": "Grade", "req": true}, {"frm": "Classes", "to": "Teachers", "field": "Class Teacher", "req": false}, {"frm": "EIDUStaff", "to": "EIDURoles", "field": "Role", "req": false}, {"frm": "GovOfficials", "to": "GovRoles", "field": "Role", "req": false}, {"frm": "CurricularService", "to": "Subjects", "field": "Subject", "req": false}, {"frm": "Forms", "to": "FormAvailability", "field": "Form Availability", "req": false}, {"frm": "Forms", "to": "EIDUStaff", "field": "Form Owner", "req": false}], "labels": [["people & roles", 388, 42], ["curriculum", 388, 162], ["forms", 388, 282], ["new lookup", 388, 344]]};
+const E=DATA.E;
+const NS="http://www.w3.org/2000/svg";
+function el(n,a){const x=document.createElementNS(NS,n);for(const k in a)x.setAttribute(k,a[k]);return x;}
+function center(id){const b=E[id];if(!b)return[0,0];return [b.x+b.w/2,b.y+b.h/2];}
+function onRect(id,tx,ty){const b=E[id];const cx=b.x+b.w/2,cy=b.y+b.h/2;let dx=tx-cx,dy=ty-cy;if(dx===0&&dy===0)return[cx,cy];const sx=dx?(b.w/2)/Math.abs(dx):1e9,sy=dy?(b.h/2)/Math.abs(dy):1e9;const s=Math.min(sx,sy);return[cx+dx*s,cy+dy*s];}
+function edgePath(a,bid){const[ax,ay]=center(a),[bx,by]=center(bid);const[x1,y1]=onRect(a,bx,by),[x2,y2]=onRect(bid,ax,ay);return [x1,y1,x2,y2];}
+const svg=el("svg",{viewBox:"0 0 640 480",role:"img"});
+svg.appendChild((()=>{const t=el("title",{});t.textContent="Kenya primary entity configuration map";return t;})());
+const defs=el("defs",{});
+defs.innerHTML='<marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></marker>';
+svg.appendChild(defs);
+// group labels
+DATA.labels.forEach(([txt,x,y])=>{const t=el("text",{x:x,y:y,class:"glabel"});t.textContent=txt;svg.appendChild(t);});
+// hierarchy edges
+DATA.hier.forEach(([a,b])=>{const[x1,y1,x2,y2]=edgePath(a,b);const l=el("line",{x1,y1,x2,y2,class:"heredge","marker-end":"url(#arrow)"});svg.appendChild(l);});
+// reference edges (hidden)
+DATA.ref.forEach((r,i)=>{const[x1,y1,x2,y2]=edgePath(r.frm,r.to);const l=el("line",{x1,y1,x2,y2,class:"refedge","data-from":r.frm,"marker-end":"url(#arrow)"});svg.appendChild(l);});
+// nodes
+const nodeEls={};
+for(const id in E){const b=E[id];const g=el("g",{class:"node c-"+b.color,"data-id":id});
+ g.appendChild(el("rect",{x:b.x,y:b.y,width:b.w,height:b.h,rx:8,"stroke-width":.6}));
+ const cx=b.x+b.w/2,cy=b.y+b.h/2;
+ let lines=(b.disp||[b.label]).map(t=>({t:t,c:"th"}));
+ if(b.color==="coral")lines.push({t:"new",c:"ts"});
+ const lh=14,sy=cy-(lines.length-1)*lh/2;
+ lines.forEach((L,i)=>{const t=el("text",{x:cx,y:sy+i*lh,class:L.c,"text-anchor":"middle","dominant-baseline":"central"});t.textContent=L.t;g.appendChild(t);});
+ g.addEventListener("click",()=>select(id));
+ svg.appendChild(g);nodeEls[id]=g;}
+document.getElementById("svghost").appendChild(svg);
+
+function refsOut(id){return DATA.ref.filter(r=>r.frm===id);}
+function ownerOut(id){return DATA.hier.filter(h=>h[0]===id).map(h=>h[1]);}
+function referencedBy(id){const a=DATA.ref.filter(r=>r.to===id).map(r=>r.frm);const b=DATA.hier.filter(h=>h[1]===id).map(h=>h[0]);return [...new Set([...a,...b])];}
+
+function select(id){
+ Object.values(nodeEls).forEach(n=>{n.classList.remove("active");n.classList.add("dim");});
+ svg.querySelectorAll(".refedge").forEach(l=>l.classList.remove("show"));
+ const keep=new Set([id,...refsOut(id).map(r=>r.to),...ownerOut(id),...referencedBy(id)]);
+ keep.forEach(k=>nodeEls[k]&&nodeEls[k].classList.remove("dim"));
+ nodeEls[id].classList.add("active");
+ svg.querySelectorAll('.refedge[data-from="'+id+'"]').forEach(l=>l.classList.add("show"));
+ renderPanel(id);
+}
+const colorHex={teal:["#e1f5ee","#085041"],gray:["#f1efe8","#2c2c2a"],coral:["#faece7","#4a1b0c"]};
+function renderPanel(id){
+ const b=E[id];const[fill,fg]=colorHex[b.color];
+ let h='<span class="ptag" style="background:'+fill+';color:'+fg+'">'+(b.color==="coral"?"proposed":"existing")+'</span>';
+ h+='<div class="pname">'+b.label+'</div><div class="pkind">kind: '+b.kind+'</div>';
+ h+='<div class="psec">fields</div>';
+ b.fields.forEach(f=>{const[fn,ft,tgt,req]=f;let t=ft==="Reference"?("→ "+tgt):ft;h+='<div class="frow"><span class="fname">'+fn+(req?' <span class="reqd">*</span>':'')+'</span><span class="ftype">'+t+'</span></div>';});
+ h+='<div class="psec">label</div><div class="reflist">1 &middot; <b>'+b.label1+'</b>'+(b.label2?'<br>2 &middot; '+b.label2:'')+'</div>';
+ const rb=referencedBy(id);
+ if(rb.length){h+='<div class="psec">referenced by</div><div class="reflist">'+rb.map(x=>E[x].label).join(', ')+'</div>';}
+ if(b.note)h+='<div class="info-flag"><strong>New:</strong> '+b.note+'</div>';
+ if(b.flag)h+='<div class="info-flag"><strong>Note:</strong> '+b.flag+'</div>';
+ document.getElementById("panel").innerHTML=h;
+}
+</script></body></html>
