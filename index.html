@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>render-me</title>
+<style>
+  /* ---- Override here if auto-detection ever guesses wrong ----
+     The script reads OWNER and REPO from window if you set them below.
+     Leave blank to auto-detect from the page URL. */
+
+  :root {
+    --paper: #F7F6F3;
+    --ink: #1A1A22;
+    --muted: #6E6E79;
+    --line: #E4E2DC;
+    --card: #FFFFFF;
+    --accent: #2D5BFF;
+    --accent-soft: rgba(45, 91, 255, 0.08);
+    --radius: 14px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #121217;
+      --ink: #ECEBE6;
+      --muted: #8E8E99;
+      --line: #26262E;
+      --card: #1A1A21;
+      --accent: #6E8BFF;
+      --accent-soft: rgba(110, 139, 255, 0.12);
+    }
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 72px 24px 96px;
+  }
+
+  header { margin-bottom: 40px; }
+
+  .repo {
+    font-family: ui-monospace, "SF Mono", "Menlo", "Cascadia Code", monospace;
+    font-size: 0.82rem;
+    letter-spacing: 0.02em;
+    color: var(--muted);
+    margin: 0 0 10px;
+  }
+
+  h1 {
+    font-size: clamp(2.1rem, 6vw, 3rem);
+    font-weight: 600;
+    letter-spacing: -0.025em;
+    margin: 0 0 12px;
+    line-height: 1.05;
+  }
+
+  .tagline {
+    font-size: 1.02rem;
+    color: var(--muted);
+    margin: 0;
+    max-width: 46ch;
+  }
+
+  .status {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 24px;
+    font-family: ui-monospace, "SF Mono", "Menlo", monospace;
+    font-size: 0.76rem;
+    color: var(--muted);
+  }
+
+  .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 0 var(--accent-soft);
+    animation: pulse 2.4s ease-out infinite;
+  }
+  @keyframes pulse {
+    0%   { box-shadow: 0 0 0 0 var(--accent-soft); }
+    70%  { box-shadow: 0 0 0 10px rgba(45,91,255,0); }
+    100% { box-shadow: 0 0 0 0 rgba(45,91,255,0); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .dot { animation: none; }
+  }
+
+  ul.files { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
+
+  a.file {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    text-decoration: none;
+    color: inherit;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    transition: border-color .15s ease, transform .15s ease, box-shadow .15s ease;
+  }
+  a.file:hover, a.file:focus-visible {
+    border-color: var(--accent);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px -12px var(--accent);
+    outline: none;
+  }
+  a.file:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .name {
+    font-size: 1.08rem;
+    font-weight: 550;
+    letter-spacing: -0.01em;
+  }
+  .filename {
+    font-family: ui-monospace, "SF Mono", "Menlo", monospace;
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin-top: 3px;
+  }
+  .meta { flex: 1; min-width: 0; }
+  .arrow { color: var(--muted); transition: color .15s, transform .15s; align-self: center; }
+  a.file:hover .arrow { color: var(--accent); transform: translateX(3px); }
+
+  .tag {
+    font-family: ui-monospace, monospace;
+    font-size: 0.68rem;
+    color: var(--accent);
+    background: var(--accent-soft);
+    padding: 2px 7px;
+    border-radius: 6px;
+    align-self: center;
+  }
+
+  .note {
+    background: var(--card);
+    border: 1px dashed var(--line);
+    border-radius: var(--radius);
+    padding: 28px 24px;
+    color: var(--muted);
+  }
+  .note strong { color: var(--ink); font-weight: 600; }
+  .note code {
+    font-family: ui-monospace, monospace;
+    background: var(--accent-soft);
+    color: var(--accent);
+    padding: 1px 6px;
+    border-radius: 5px;
+    font-size: 0.85em;
+  }
+
+  footer {
+    margin-top: 56px;
+    font-family: ui-monospace, monospace;
+    font-size: 0.72rem;
+    color: var(--muted);
+  }
+  footer a { color: var(--muted); }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <p class="repo" id="repoLabel">…</p>
+      <h1>render-me</h1>
+      <p class="tagline">Things that only make sense once a browser gets involved. Everything below is served live from the repo.</p>
+      <div class="status"><span class="dot" aria-hidden="true"></span><span id="statusText">pulling the list…</span></div>
+    </header>
+
+    <main id="content">
+      <div class="note">Loading the file list from GitHub…</div>
+    </main>
+
+    <footer>
+      <span id="footText"></span>
+    </footer>
+  </div>
+
+<script>
+(function () {
+  // Optional manual override. Leave as null to auto-detect from the URL.
+  var OWNER = window.OWNER || null;
+  var REPO  = window.REPO  || null;
+
+  // --- Figure out which repo we're sitting in ---
+  var host = location.hostname;                       // e.g. ituartema.github.io
+  var segs = location.pathname.split('/').filter(Boolean);
+  if (!OWNER) OWNER = host.split('.')[0] || '';
+  if (!REPO)  REPO  = segs.length ? segs[0] : (host); // project page -> first segment; user page -> host
+
+  var repoLabel  = document.getElementById('repoLabel');
+  var statusText = document.getElementById('statusText');
+  var content    = document.getElementById('content');
+  var footText   = document.getElementById('footText');
+  repoLabel.textContent = OWNER + '/' + REPO;
+
+  // Turn "rwanda-pilot_demo.html" into "Rwanda pilot demo"
+  function prettify(name) {
+    var base = name.replace(/\.html?$/i, '').replace(/[-_]+/g, ' ').trim();
+    if (!base) return name;
+    return base.charAt(0).toUpperCase() + base.slice(1);
+  }
+
+  function render(items) {
+    var files = items.filter(function (it) {
+      if (it.type === 'dir') return true;
+      return it.type === 'file' &&
+             /\.html?$/i.test(it.name) &&
+             it.name.toLowerCase() !== 'index.html';
+    });
+
+    // directories first, then files; alphabetical within each
+    files.sort(function (a, b) {
+      if (a.type !== b.type) return a.type === 'dir' ? -1 : 1;
+      return a.name.localeCompare(b.name);
+    });
+
+    if (!files.length) {
+      content.innerHTML =
+        '<div class="note"><strong>Nothing here yet.</strong><br>' +
+        'Drop any <code>.html</code> file into the repo and it\'ll appear on this page the next time it loads — no editing this file required.</div>';
+      statusText.textContent = '0 files · live from GitHub';
+      return;
+    }
+
+    var ul = document.createElement('ul');
+    ul.className = 'files';
+
+    files.forEach(function (it) {
+      var isDir = it.type === 'dir';
+      var href = isDir ? './' + it.name + '/' : './' + encodeURIComponent(it.name);
+
+      var a = document.createElement('a');
+      a.className = 'file';
+      a.href = href;
+
+      var meta = document.createElement('div');
+      meta.className = 'meta';
+
+      var nm = document.createElement('div');
+      nm.className = 'name';
+      nm.textContent = isDir ? prettify(it.name) : prettify(it.name);
+
+      var fn = document.createElement('div');
+      fn.className = 'filename';
+      fn.textContent = isDir ? it.name + '/' : it.name;
+
+      meta.appendChild(nm);
+      meta.appendChild(fn);
+      a.appendChild(meta);
+
+      if (isDir) {
+        var tag = document.createElement('span');
+        tag.className = 'tag';
+        tag.textContent = 'folder';
+        a.appendChild(tag);
+      }
+
+      var arrow = document.createElement('span');
+      arrow.className = 'arrow';
+      arrow.setAttribute('aria-hidden', 'true');
+      arrow.textContent = '→';
+      a.appendChild(arrow);
+
+      ul.appendChild(a);
+    });
+
+    content.innerHTML = '';
+    content.appendChild(ul);
+
+    var n = files.length;
+    statusText.textContent = n + (n === 1 ? ' file' : ' files') + ' · live from GitHub';
+  }
+
+  function fail(msg) {
+    content.innerHTML = '<div class="note">' + msg + '</div>';
+    statusText.textContent = 'couldn\'t load the list';
+  }
+
+  var api = 'https://api.github.com/repos/' + OWNER + '/' + REPO + '/contents/';
+
+  fetch(api, { headers: { 'Accept': 'application/vnd.github+json' } })
+    .then(function (res) {
+      if (res.status === 403) {
+        throw new Error('rate');
+      }
+      if (res.status === 404) {
+        throw new Error('notfound');
+      }
+      if (!res.ok) throw new Error('http ' + res.status);
+      return res.json();
+    })
+    .then(function (data) {
+      if (!Array.isArray(data)) throw new Error('shape');
+      render(data);
+      footText.textContent = 'index regenerates on every load · ' + OWNER + '.github.io/' + REPO;
+    })
+    .catch(function (err) {
+      if (err.message === 'rate') {
+        fail('<strong>GitHub is rate-limiting this page.</strong><br>' +
+             'The list is fetched without a login, which GitHub caps at 60 requests an hour per network. Give it a few minutes and refresh.');
+      } else if (err.message === 'notfound') {
+        fail('<strong>Can\'t see the repo <code>' + OWNER + '/' + REPO + '</code>.</strong><br>' +
+             'This auto-listing only works when the repo is <strong>public</strong>. If it\'s private, either make it public or list files manually.');
+      } else {
+        fail('<strong>Something went sideways fetching the list.</strong><br>' +
+             'You can still reach any page directly at <code>' + OWNER + '.github.io/' + REPO + '/filename.html</code>.');
+      }
+    });
+})();
+</script>
+</body>
+</html>
