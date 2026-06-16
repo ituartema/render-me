@@ -1,0 +1,580 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trellis Console — entity map & access paths</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --teal:#02424C; --teal-2:#0a5b66; --teal-3:#11707d;
+  --lime:#EBFC6F; --sky:#7FCDD1; --warm:#CEC7BF; --egg:#EFEEE9;
+  --paper:#f3f2ec; --ink:#02424C; --muted:#5f7173; --line:#dcd9d0;
+  --disp:'Space Grotesk',sans-serif; --body:'Inter',sans-serif; --mono:'DM Mono',monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--body);line-height:1.6;-webkit-font-smoothing:antialiased;}
+.grain{position:relative;}
+.grain::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:.12;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");}
+.wrap{max-width:1120px;margin:0 auto;padding:0 28px;}
+
+/* header */
+header{background:radial-gradient(130% 130% at 30% 75%,#0a5b66 0%,#063b44 48%,#02333b 100%);color:var(--egg);overflow:hidden;}
+.head-inner{display:flex;flex-direction:column;gap:22px;padding:34px 28px 40px;max-width:1120px;margin:0 auto;position:relative;z-index:1;}
+.brandbar{display:flex;align-items:center;gap:12px;}
+.brandbar svg.sign{width:30px;height:30px;flex:none;}
+.brandbar svg.word{height:19px;width:auto;}
+.brandbar .word path,.brandbar .word polygon{fill:var(--egg);}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--lime);}
+h1{font-family:var(--disp);font-weight:600;font-size:clamp(26px,4vw,40px);line-height:1.08;margin:0;max-width:18ch;letter-spacing:-.01em;}
+.stand{font-size:15px;color:#cfe3e4;max-width:62ch;margin:0;}
+.tagrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:2px;}
+.tag{font-family:var(--mono);font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;border:1px solid rgba(127,205,209,.4);color:var(--sky);padding:4px 10px;border-radius:99px;}
+
+/* section scaffold */
+section{padding:56px 0;}
+.snum{font-family:var(--mono);font-size:12px;color:var(--teal-3);letter-spacing:.1em;}
+h2{font-family:var(--disp);font-weight:600;font-size:25px;margin:6px 0 8px;letter-spacing:-.01em;}
+.lede{color:var(--muted);max-width:64ch;margin:0 0 26px;font-size:15px;}
+
+/* map */
+.columns{display:grid;grid-template-columns:1fr 340px;gap:22px;align-items:start;}
+.diagram-card{background:#faf9f5;border:1px solid var(--line);border-radius:16px;padding:12px;position:sticky;top:18px;}
+svg.map{width:100%;display:block;}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:10.5px;color:var(--muted);padding:10px 6px 4px;}
+.legend span{display:inline-flex;align-items:center;gap:6px;}
+.sw{width:12px;height:12px;border-radius:3px;border:1px solid;}
+.th{font-family:var(--disp);font-size:12.5px;font-weight:500;}
+.ts{font-family:var(--disp);font-size:10px;font-weight:400;}
+.glabel{font-family:var(--mono);font-size:9px;letter-spacing:.08em;text-transform:uppercase;fill:#9aa9aa;}
+.node{cursor:pointer;outline:none;}
+.node rect{transition:opacity .15s,stroke-width .15s;}
+.node:focus-visible rect{stroke:var(--teal);stroke-width:2.4;}
+.k-generic rect{fill:var(--egg);stroke:var(--warm);}.k-generic .th{fill:var(--ink);}.k-generic .ts{fill:var(--muted);}
+.k-school rect{fill:var(--teal);stroke:var(--teal);}.k-school .th{fill:var(--egg);}.k-school .ts{fill:#9ec7cb;}
+.k-user rect{fill:var(--sky);stroke:#5cabb0;}.k-user .th{fill:#04353c;}.k-user .ts{fill:#1c4a4f;}
+.k-form rect{fill:var(--warm);stroke:#b1a89d;}.k-form .th{fill:var(--ink);}.k-form .ts{fill:#5c5046;}
+.node.proposed rect{stroke-dasharray:4 3;}
+.node.active rect{stroke-width:2;}
+.dim{opacity:.26;}
+.heredge{stroke:#9fb0b1;stroke-width:.8;fill:none;}
+.refedge{stroke:var(--sky);stroke-width:1.1;stroke-dasharray:5 4;fill:none;display:none;}
+.refedge.show{display:block;}
+
+.panel{background:#faf9f5;border:1px solid var(--line);border-radius:16px;padding:18px;min-height:240px;}
+.ph{display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--muted);font-size:13.5px;text-align:center;gap:8px;padding:48px 12px;}
+.ph .arr{font-size:22px;color:var(--sky);}
+.ptag{display:inline-block;font-family:var(--mono);font-size:10px;padding:3px 9px;border-radius:6px;text-transform:uppercase;letter-spacing:.06em;}
+.pname{font-family:var(--disp);font-size:19px;font-weight:600;margin:9px 0 2px;}
+.pkind{font-family:var(--mono);font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:14px;}
+.psec{font-family:var(--mono);font-size:9px;letter-spacing:.09em;text-transform:uppercase;color:#9aa9aa;margin:15px 0 7px;}
+.frow{display:flex;justify-content:space-between;gap:10px;font-size:12.5px;padding:4px 0;border-bottom:1px dashed var(--line);}
+.fname{color:var(--ink);}
+.ftype{color:var(--muted);font-family:var(--mono);font-size:10px;text-align:right;white-space:nowrap;}
+.reqd{color:var(--teal-3);font-weight:700;}
+.reflist{font-size:12.5px;color:var(--muted);}
+.reflist b{color:var(--ink);font-weight:600;}
+.flagbox{margin-top:12px;padding:10px 13px;background:#eef6f0;border:1px solid #bfe0cf;border-radius:8px;font-size:12px;color:#2c5a44;line-height:1.6;}
+.flagbox strong{color:#1d4232;}
+.newbox{margin-top:12px;padding:10px 13px;background:#eef7f8;border:1px solid #b6dadd;border-radius:8px;font-size:12px;color:#1c4a4f;line-height:1.6;}
+.newbox strong{color:#04353c;}
+
+/* tracer (dark) */
+.tracer-sec{background:radial-gradient(130% 130% at 78% 18%,#0a5b66 0%,#06414a 50%,#02333b 100%);color:var(--egg);}
+.tracer-sec .snum{color:var(--lime);}
+.tracer-sec h2{color:var(--egg);}
+.tracer-sec .lede{color:#cfe3e4;}
+.controls{display:flex;gap:18px;flex-wrap:wrap;margin-bottom:26px;}
+.ctl{display:flex;flex-direction:column;gap:6px;}
+.ctl label{font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--sky);}
+.ctl select{appearance:none;background:#08505a;color:var(--egg);border:1px solid #2c7079;border-radius:9px;padding:10px 34px 10px 13px;font-family:var(--body);font-size:14px;min-width:230px;cursor:pointer;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none' stroke='%237FCDD1' stroke-width='1.6'%3E%3Cpath d='M1 1l5 5 5-5'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 13px center;}
+.ctl select:focus-visible{outline:2px solid var(--lime);outline-offset:1px;}
+
+.chainwrap{background:rgba(2,42,46,.45);border:1px solid #1e5f69;border-radius:16px;padding:26px 22px;}
+.chain{display:flex;align-items:stretch;flex-wrap:wrap;gap:0;}
+.chip{display:flex;flex-direction:column;justify-content:center;gap:3px;border-radius:11px;padding:12px 15px;min-width:118px;border:1.5px solid var(--lime);}
+.chip.role{background:transparent;}
+.chip.mid{background:#0a5b66;}
+.chip.target{background:var(--lime);border-color:var(--lime);}
+.chip .cn{font-family:var(--disp);font-weight:600;font-size:14.5px;color:var(--egg);}
+.chip .ck{font-family:var(--mono);font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--sky);}
+.chip.target .cn{color:var(--teal);}
+.chip.target .ck{color:#3a6e2f;}
+.conn{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 4px;min-width:96px;align-self:center;}
+.conn .via{font-family:var(--mono);font-size:9.5px;color:var(--sky);text-align:center;line-height:1.3;margin-bottom:3px;max-width:104px;}
+.conn .arrow{color:var(--lime);font-size:16px;line-height:1;}
+.reading{margin:22px 0 0;font-size:15.5px;color:var(--egg);max-width:66ch;}
+.reading b{color:var(--lime);font-weight:600;}
+.rule{margin-top:18px;border-left:2px solid var(--lime);padding:10px 0 10px 15px;font-size:13px;color:#cfe3e4;max-width:70ch;}
+.rule .rt{font-family:var(--mono);font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--lime);display:block;margin-bottom:4px;}
+
+footer{background:var(--teal);color:#bcd;padding:34px 0;}
+.foot-inner{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:14px;max-width:1120px;margin:0 auto;padding:0 28px;}
+.foot-inner .word{height:16px;}.foot-inner .word path,.foot-inner .word polygon{fill:var(--egg);}
+.foot-note{font-family:var(--mono);font-size:10.5px;color:#7fb0b5;letter-spacing:.04em;max-width:48ch;text-align:right;}
+.coming{margin-top:30px;border-top:1px dashed var(--line);padding-top:18px;font-size:13px;color:var(--muted);}
+.coming b{color:var(--ink);}
+
+@media (max-width:860px){
+  .columns{grid-template-columns:1fr;}
+  .diagram-card{position:static;}
+  .ctl select{min-width:0;width:100%;}
+  .foot-note{text-align:left;}
+}
+/* kinds */
+.kinds-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px;}
+.kcard{background:#faf9f5;border:1px solid var(--line);border-top:3px solid var(--warm);border-radius:12px;padding:16px;}
+.kcard .kk{font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);}
+.kcard h4{font-family:var(--disp);font-weight:600;font-size:16px;margin:4px 0 8px;}
+.kcard p{margin:0;font-size:12.5px;color:var(--muted);line-height:1.55;}
+.kcard.k-school-c{background:var(--teal);border-top-color:var(--lime);}
+.kcard.k-school-c .kk{color:var(--sky);}.kcard.k-school-c h4{color:var(--egg);}.kcard.k-school-c p{color:#cfe3e4;}
+.kcard.k-user-c{border-top-color:var(--sky);}
+.kcard.k-form-c{border-top-color:#b1a89d;}
+.twonote{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.nbox{background:#faf9f5;border:1px solid var(--line);border-radius:12px;padding:16px;}
+.nbox h4{font-family:var(--disp);font-weight:600;font-size:14.5px;margin:0 0 6px;}
+.nbox p{margin:0;font-size:13px;color:var(--muted);line-height:1.55;}
+.nbox .mono-em{font-family:var(--mono);color:var(--teal-3);font-size:12px;}
+
+/* semantic-links toggle */
+.sl-btns{display:flex;gap:10px;margin-bottom:22px;flex-wrap:wrap;}
+.sl-btns button{font-family:var(--body);font-size:13px;cursor:pointer;border-radius:9px;padding:9px 14px;border:1px solid #2c7079;background:#08505a;color:#cfe3e4;}
+.sl-btns button.on{background:var(--lime);color:var(--teal);border-color:var(--lime);font-weight:600;}
+.sl-btns button:focus-visible{outline:2px solid var(--lime);outline-offset:1px;}
+.chip.off{border-color:#2c7079;background:transparent;}
+.chip.off .cn{color:#86abb0;}.chip.off .ck{color:#4d7a80;}
+.conn.off .arrow{color:#2c7079;}.conn.off .via{color:#4d7a80;}
+.sl-cap{margin-top:18px;font-size:14.5px;color:#cfe3e4;min-height:3em;max-width:68ch;}
+.sl-cap b{color:var(--lime);font-weight:600;}
+.sl-notes{margin-top:22px;display:grid;grid-template-columns:repeat(2,1fr);gap:14px;}
+.sl-note{border-left:2px solid var(--sky);padding:4px 0 4px 13px;font-size:12.5px;color:#cfe3e4;}
+.sl-note .slh{font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--sky);display:block;margin-bottom:3px;}
+
+/* configs nesting */
+.nest{max-width:560px;}
+.nlabel{font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px;display:block;}
+.nest-config{border:1.6px solid var(--teal);border-radius:16px;padding:16px;background:#eef6f7;}
+.nest-config>.nlabel{color:var(--teal);}
+.nest-dash{border:1.4px solid var(--teal-3);border-radius:13px;padding:14px;background:#e2eff0;}
+.nest-dash>.nlabel{color:var(--teal-3);}
+.nest-chart{border:1.3px solid #2f8a96;border-radius:11px;padding:13px;background:#d7ebec;}
+.nest-chart>.nlabel{color:#2f8a96;}
+.nest-data{border:1.2px solid #4aa0aa;border-radius:9px;padding:12px;background:#ccdfe0;}
+.nest-data>.nlabel{color:#317680;}
+.nest-data p{margin:0;font-size:12.5px;color:#2c5258;}
+.cfg-cap{margin:16px 0 0;font-size:14px;color:var(--muted);max-width:62ch;}
+.cfg-notes{margin-top:22px;display:grid;grid-template-columns:repeat(2,1fr);gap:14px;}
+
+/* principles */
+.principles{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+.pcard{background:#faf9f5;border:1px solid var(--line);border-left:3px solid var(--teal);border-radius:10px;padding:16px;}
+.pcard h4{font-family:var(--disp);font-weight:600;font-size:15px;margin:0 0 7px;}
+.pcard p{margin:0;font-size:12.5px;color:var(--muted);line-height:1.55;}
+
+/* glossary */
+.gloss{display:grid;grid-template-columns:1fr 1fr;gap:0 36px;}
+.grow{display:grid;grid-template-columns:128px 1fr;gap:14px;padding:11px 0;border-bottom:1px dashed var(--line);align-items:baseline;}
+.grow .gt{font-family:var(--disp);font-weight:600;font-size:13.5px;color:var(--ink);}
+.grow .gd{font-size:12.5px;color:var(--muted);line-height:1.5;}
+
+/* exercises */
+.todo{list-style:none;padding:0;margin:0;display:grid;gap:10px;max-width:780px;}
+.todo li{background:#faf9f5;border:1px solid var(--line);border-radius:10px;}
+.todo label{display:flex;gap:12px;align-items:flex-start;padding:13px 15px;cursor:pointer;font-size:14px;color:var(--ink);}
+.todo input{margin-top:3px;width:16px;height:16px;accent-color:var(--teal);flex:none;}
+.todo input:checked ~ span{color:var(--muted);text-decoration:line-through;}
+.oq{margin-top:24px;background:#eef6f7;border:1px solid #bfe0cf;border-radius:12px;padding:16px 18px;}
+.oq h4{font-family:var(--disp);font-weight:600;font-size:14px;margin:0 0 8px;color:#1d4232;}
+.oq ul{margin:0;padding-left:18px;font-size:13px;color:#2c5a44;}
+.oq li{margin-bottom:5px;}
+
+@media (max-width:860px){
+  .kinds-grid,.principles,.gloss,.sl-notes,.cfg-notes,.twonote{grid-template-columns:1fr;}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;}}
+</style></head>
+<body>
+
+<header class="grain">
+<div class="head-inner">
+  <div class="brandbar">
+    <svg class="sign" viewBox="0 0 350 350" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <path fill="#02424C" d="M175,350c96.6482,0,175-78.3421,175-175.0062S271.6482,0,175,0,0,78.3421,0,174.9938s78.3517,175.0062,175,175.0062"/>
+      <polygon fill="#EBFC6F" points="205.1957 272.909 107.7703 272.909 107.7703 122.1501 137.4193 122.1501 137.4193 243.26 205.1957 243.26 205.1957 272.909"/>
+      <polygon fill="#EBFC6F" points="268.2541 209.3555 170.8286 209.3555 170.8286 56.2715 200.4776 56.2715 200.4776 179.7065 268.2541 179.7065 268.2541 209.3555"/>
+    </svg>
+    <svg class="word" viewBox="0 0 350 110.6966" xmlns="http://www.w3.org/2000/svg" aria-label="trellis">
+      <path d="M13.8891,90.2794v-46.8065H0v-11.9445h13.8891v-15.4171h13.4725v15.4171h19.5836v11.9445h-19.5836v45.4176c0,5.6947,3.1946,8.1946,8.8891,8.1946h10.139v11.9447h-13.1947c-11.5279,0-19.3059-5.4168-19.3059-18.7504Z"/>
+      <path d="M75.8348,31.5285h17.6394v11.9445h-14.5837c-5.6945,0-8.8891,2.5001-8.8891,8.1946v57.3623h-13.4725v-58.7512c0-13.3336,7.778-18.7502,19.3059-18.7502Z"/>
+      <path d="M94.5845,70.2791c0-23.6115,16.8058-40.4173,39.584-40.4173,20.8337,0,36.9453,14.4446,38.6119,33.8895.2778,3.3335.2778,6.9446,0,10.139h-64.1678c1.5278,15.2782,12.0836,25.2783,25.6949,25.2783,9.4446,0,19.0283-4.8611,22.5005-14.028h14.028c-3.4722,15.1392-17.3615,25.5561-36.6674,25.5561-22.9171,0-39.584-16.806-39.584-40.4175ZM158.7523,63.3346c-1.9444-14.3059-13.7502-21.945-24.4449-21.945-12.6391,0-22.6392,8.7503-25.1393,21.945h49.5843Z"/>
+      <path d="M271.1099,43.473h-12.6391v-11.9445h26.1115v77.5014h-13.4723V43.473ZM267.3598,9.5835c0-5.139,4.3056-9.5835,9.5835-9.5835s9.5835,4.4445,9.5835,9.5835c0,5.2779-4.3058,9.7224-9.5835,9.7224s-9.5835-4.4445-9.5835-9.7224Z"/>
+      <path d="M297.0823,88.0572h12.0836c.6944,7.9169,6.9445,11.9447,14.8614,11.9447,7.7778,0,13.1947-4.1667,13.1947-10.5558,0-5.2777-2.639-9.8612-10.4169-12.2224l-10.0003-2.9167c-12.3613-3.7501-18.1947-11.8058-18.1947-22.2226,0-12.917,10.8335-22.0837,25.2783-22.0837,10.2779,0,23.1949,5.139,24.7228,21.6669h-11.5281c-.8334-6.6668-6.25-11.1113-13.3336-11.1113s-12.3613,4.4445-12.3613,10.5558c0,5.4168,3.0556,9.1669,10.5558,11.3892l9.4446,2.7778c13.3336,3.889,18.6115,12.5002,18.6115,22.9171,0,12.7781-10.0003,22.5005-25.9727,22.5005-12.0836,0-26.1116-5.2779-26.945-22.6394Z"/>
+      <polygon points="230.8214 109.0303 186.5519 109.0303 186.5519 31.5679 200.0242 31.5679 200.0242 95.5579 230.8214 95.5579 230.8214 109.0303"/>
+      <polygon points="259.4748 80.1519 215.2052 80.1519 215.2052 1.6331 228.6776 1.6331 228.6776 66.6796 259.4748 66.6796 259.4748 80.1519"/>
+    </svg>
+  </div>
+  <div>
+    <div class="eyebrow">Console onboarding · how it works today</div>
+    <h1>The entity map, and how access paths decide what a user sees</h1>
+  </div>
+  <p class="stand">A Trellis organization is a database you design from scratch: entity types are the tables, references are the wiring between them, and access-control paths walk that wiring to scope exactly what each role can see. Work through it top to bottom, or jump straight to the live map and the path tracer.</p>
+  <div class="tagrow">
+    <span class="tag">Kenya primary · load-test org</span>
+    <span class="tag">Interactive walkthrough</span>
+    <span class="tag">Map + path tracer</span>
+  </div>
+</div>
+</header>
+
+<!-- SECTION 1: MAP -->
+<section>
+<div class="wrap">
+  <div class="snum">01 — the structure</div>
+  <h2>The dependency map</h2>
+  <p class="lede">Every org is built simplest entity first: each thing can only exist once the things it depends on do. Solid arrows show ownership (a sub-county owns its schools); click any entity to see its fields and the references it points at, shown as dashed lines.</p>
+  <div class="columns">
+    <div class="diagram-card grain"><div id="svghost"></div>
+      <div class="legend">
+        <span><span class="sw" style="background:#02424C;border-color:#02424C"></span>School kind</span>
+        <span><span class="sw" style="background:#7FCDD1;border-color:#5cabb0"></span>User kind</span>
+        <span><span class="sw" style="background:#EFEEE9;border-color:#CEC7BF"></span>Generic kind</span>
+        <span><span class="sw" style="background:#CEC7BF;border-color:#b1a89d"></span>Form kind</span>
+        <span><span class="sw" style="border:1px dashed #5f7173;background:transparent"></span>proposed (enterprise app)</span>
+      </div>
+    </div>
+    <div class="panel" id="panel"><div class="ph"><div class="arr">&larr;</div><div>Click any entity to see its kind, fields, and what it references.</div></div></div>
+  </div>
+</div>
+</section>
+
+<!-- SECTION 02: KINDS -->
+<section>
+<div class="wrap">
+  <div class="snum">02 — the building blocks</div>
+  <h2>Entity kinds</h2>
+  <p class="lede">Every entity type has a <em>kind</em> — the behaviour class that tells the system how it should act. Four kinds appear in this org; most things are Generic, and a few earn special powers.</p>
+  <div class="kinds-grid">
+    <div class="kcard k-generic-c"><span class="kk">Generic</span><h4>Just data</h4><p>A name and some fields, no special behaviour. Most of the org: geography, roles, lookups, classes, learners.</p></div>
+    <div class="kcard k-school-c"><span class="kk">School</span><h4>Issues school accounts</h4><p>The anchor entity. Everything downstream — teachers, classes, dashboards — feeds off it.</p></div>
+    <div class="kcard k-user-c"><span class="kk">User</span><h4>Gets a login</h4><p>A Keycloak account. EIDU Staff, Government Officials, and — newly — Teachers, who are app users without a Console role.</p></div>
+    <div class="kcard k-form-c"><span class="kk">Form</span><h4>Carries forms</h4><p>Holds form definitions and availability. One of the data-oriented kinds the platform grew into.</p></div>
+  </div>
+  <div class="twonote">
+    <div class="nbox"><h4>References &amp; labels</h4><p>A <span class="mono-em">reference</span> is a field pointing at another entity — one direction, one hop. A <span class="mono-em">label</span> is what shows in a list: the name, plus an optional second line pulled from a reference to tell near-identical records apart. Click any node in the map above to see both.</p></div>
+    <div class="nbox"><h4>The machinery: config, runtime, feature</h4><p>A <span class="mono-em">config</span> is the packaged view a role gets. A <span class="mono-em">runtime</span> renders an asset into an entity that syncs to the field app; a <span class="mono-em">feature</span> is the same in raw JS but leaves no asset. Engine vs. car — and runtime &amp; feature are transitional, being baked into the core as part of MLP.</p></div>
+  </div>
+</div>
+</section>
+
+<!-- SECTION 03: SEMANTIC LINKS -->
+<section class="tracer-sec sl grain">
+<div class="wrap">
+  <div class="snum">03 — teaching the chain</div>
+  <h2>Semantic links</h2>
+  <p class="lede">References stop after one hop, so on its own the system can't follow a chain across several entities. A semantic link declares the whole route so analytics can walk it end to end. Toggle the two views.</p>
+  <div class="sl-btns">
+    <button id="slA" class="on">What the system follows alone</button>
+    <button id="slB">What a semantic link declares</button>
+  </div>
+  <div class="chainwrap">
+    <div class="chain" id="slchain"></div>
+    <p class="sl-cap" id="slcap"></p>
+  </div>
+  <div class="sl-notes">
+    <div class="sl-note"><span class="slh">Set once</span>First-time configuration, after entity types exist. Stable — you rarely touch it.</div>
+    <div class="sl-note"><span class="slh">No edits</span>Links can't be edited, only deleted and recreated.</div>
+    <div class="sl-note"><span class="slh">Separate today</span>Encodes the same relationships as access control; there's a plan to unify them, not yet prioritised.</div>
+    <div class="sl-note"><span class="slh">Unowned</span>Nobody actively maintains this — a natural job for the forward deployment team.</div>
+  </div>
+</div>
+</section>
+
+<!-- SECTION 04: TRACER -->
+<section class="tracer-sec grain">
+<div class="wrap">
+  <div class="snum">04 — the hard part</div>
+  <h2>Access-path tracer</h2>
+  <p class="lede">References only reach one level deep, so the Console can't follow a chain on its own. To scope what a role sees, you declare a path from the user out to the target entity. Pick a role and what they need to see — the path lights up.</p>
+  <div class="controls">
+    <div class="ctl"><label for="role">Role (the user)</label>
+      <select id="role"></select></div>
+    <div class="ctl"><label for="target">Should be able to see</label>
+      <select id="target"></select></div>
+  </div>
+  <div class="chainwrap">
+    <div class="chain" id="chain"></div>
+    <p class="reading" id="reading"></p>
+    <div class="rule" id="rule"></div>
+  </div>
+</div>
+</section>
+
+<!-- SECTION 05: CONFIGS -->
+<section>
+<div class="wrap">
+  <div class="snum">05 — what reaches the field app</div>
+  <h2>Configs &amp; the field app</h2>
+  <p class="lede">A config is the role-specific view someone opens in the field app. It's a stack: data sets feed charts, charts fill dashboards, and dashboards make up the config.</p>
+  <div class="nest">
+    <div class="nest-config"><span class="nlabel">Config — the view a role opens</span>
+      <div class="nest-dash"><span class="nlabel">Dashboard</span>
+        <div class="nest-chart"><span class="nlabel">Chart</span>
+          <div class="nest-data"><span class="nlabel">Data set</span><p>The query underneath — where the numbers come from.</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="cfg-cap">Which config a person sees is wired through access control, matched to their role. Change the role, and the view changes with it — powerful, and a reason role edits need care.</p>
+  <div class="cfg-notes">
+    <div class="nbox"><h4>Built in code today</h4><p>Engineers create configs for now; AI-assisted creation by product is the intended direction. Runtimes and features are the machinery rendering it underneath.</p></div>
+    <div class="nbox"><h4>Impersonate stops short</h4><p>Admin impersonate previews a user's <em>entities</em>, but not their configs or dashboards yet — so you can't fully preview a head teacher's view. A good hackathon target.</p></div>
+  </div>
+</div>
+</section>
+
+<!-- SECTION 06: PRINCIPLES -->
+<section>
+<div class="wrap">
+  <div class="snum">06 — how to run it</div>
+  <h2>Operating principles</h2>
+  <p class="lede">Not features — judgement calls earned from a year of running IDO 2.0. Challenge them; they're assumptions, not laws.</p>
+  <div class="principles">
+    <div class="pcard"><h4>Fewer hands, more accountability</h4><p>One owner, maybe a backup. Many teams writing occasionally and under pressure produces expensive, avoidable mistakes.</p></div>
+    <div class="pcard"><h4>Collaboration has a price</h4><p>Multi-team editing would first need real validation, notifications, and approval steps. Functionality came before design polish — you can't have both at once.</p></div>
+    <div class="pcard"><h4>No prod / test split</h4><p>Retired as too costly. Spin up a throwaway org or use the demo org — neither gives production-scale data, which is the standing gap.</p></div>
+  </div>
+</div>
+</section>
+
+<!-- GLOSSARY -->
+<section>
+<div class="wrap">
+  <div class="snum">reference</div>
+  <h2>Glossary</h2>
+  <p class="lede">The vocabulary, in one place.</p>
+  <div class="gloss">
+    <div class="grow"><span class="gt">Entity type</span><span class="gd">A "table" in the org's schema.</span></div>
+    <div class="grow"><span class="gt">Kind</span><span class="gd">The behaviour class of an entity type: Generic, School, User, Form, and the data kinds.</span></div>
+    <div class="grow"><span class="gt">Reference</span><span class="gd">A field pointing at another entity; one direction, one hop.</span></div>
+    <div class="grow"><span class="gt">Label</span><span class="gd">What shows in lists: a name plus an optional secondary reference line.</span></div>
+    <div class="grow"><span class="gt">Semantic link</span><span class="gd">A declared multi-hop chain so analytics can traverse references end to end.</span></div>
+    <div class="grow"><span class="gt">Path / assignment</span><span class="gd">A declared chain in access control that scopes which entities a role can see.</span></div>
+    <div class="grow"><span class="gt">Config</span><span class="gd">The role-specific view (dashboards and charts) shown in the field app.</span></div>
+    <div class="grow"><span class="gt">Runtime</span><span class="gd">Code that renders an asset into an entity and syncs it to the field app. Transitional.</span></div>
+    <div class="grow"><span class="gt">Feature</span><span class="gd">Freestyle JS used to build UI; a runtime that leaves no asset. Transitional.</span></div>
+    <div class="grow"><span class="gt">Asset</span><span class="gd">Content used to build other things: charts, dashboards, form submissions.</span></div>
+    <div class="grow"><span class="gt">Impersonate</span><span class="gd">Admin view of a user's accessible entities (not configs yet).</span></div>
+  </div>
+</div>
+</section>
+
+<!-- EXERCISES -->
+<section>
+<div class="wrap">
+  <div class="snum">now go do this</div>
+  <h2>Try it in the demo org</h2>
+  <p class="lede">Reading gets you halfway. Log in and poke the live system while it's fresh.</p>
+  <ul class="todo">
+    <li><label><input type="checkbox"><span>Log into the demo org and the Nigeria org (configs only exist in Nigeria). Give data ~10 minutes to load.</span></label></li>
+    <li><label><input type="checkbox"><span>Open a school and trace its references up the chain — ward, sub-county, county. Find its secondary label.</span></label></li>
+    <li><label><input type="checkbox"><span>In access control, read a role's existing paths. For one read permission, find the shortest path and explain why the alternatives are noise.</span></label></li>
+    <li><label><input type="checkbox"><span>Impersonate an officer. Note what's visible, what shows as a broken link (no access), and where impersonate stops (configs).</span></label></li>
+    <li><label><input type="checkbox"><span>Open an Insights config in Nigeria and see how dashboards, charts and data sets nest.</span></label></li>
+    <li><label><input type="checkbox"><span>Come back with "why is it built this way?" questions — poke holes.</span></label></li>
+  </ul>
+  <div class="oq"><h4>Still open</h4>
+    <ul>
+      <li>Why are there two head-teacher paths on the school? (location-based vs. direct)</li>
+      <li>Should geography creation sit with RMs, an org admin, or the expansion team?</li>
+      <li>Who owns semantic-link maintenance going forward?</li>
+      <li>Demo org — current status and blockers (raised, not yet answered).</li>
+    </ul>
+  </div>
+</div>
+</section>
+
+<footer>
+<div class="foot-inner">
+  <svg class="word" viewBox="0 0 350 110.6966" xmlns="http://www.w3.org/2000/svg" aria-label="trellis">
+    <path d="M13.8891,90.2794v-46.8065H0v-11.9445h13.8891v-15.4171h13.4725v15.4171h19.5836v11.9445h-19.5836v45.4176c0,5.6947,3.1946,8.1946,8.8891,8.1946h10.139v11.9447h-13.1947c-11.5279,0-19.3059-5.4168-19.3059-18.7504Z"/><path d="M75.8348,31.5285h17.6394v11.9445h-14.5837c-5.6945,0-8.8891,2.5001-8.8891,8.1946v57.3623h-13.4725v-58.7512c0-13.3336,7.778-18.7502,19.3059-18.7502Z"/><path d="M94.5845,70.2791c0-23.6115,16.8058-40.4173,39.584-40.4173,20.8337,0,36.9453,14.4446,38.6119,33.8895.2778,3.3335.2778,6.9446,0,10.139h-64.1678c1.5278,15.2782,12.0836,25.2783,25.6949,25.2783,9.4446,0,19.0283-4.8611,22.5005-14.028h14.028c-3.4722,15.1392-17.3615,25.5561-36.6674,25.5561-22.9171,0-39.584-16.806-39.584-40.4175ZM158.7523,63.3346c-1.9444-14.3059-13.7502-21.945-24.4449-21.945-12.6391,0-22.6392,8.7503-25.1393,21.945h49.5843Z"/><path d="M271.1099,43.473h-12.6391v-11.9445h26.1115v77.5014h-13.4723V43.473ZM267.3598,9.5835c0-5.139,4.3056-9.5835,9.5835-9.5835s9.5835,4.4445,9.5835,9.5835c0,5.2779-4.3058,9.7224-9.5835,9.7224s-9.5835-4.4445-9.5835-9.7224Z"/><path d="M297.0823,88.0572h12.0836c.6944,7.9169,6.9445,11.9447,14.8614,11.9447,7.7778,0,13.1947-4.1667,13.1947-10.5558,0-5.2777-2.639-9.8612-10.4169-12.2224l-10.0003-2.9167c-12.3613-3.7501-18.1947-11.8058-18.1947-22.2226,0-12.917,10.8335-22.0837,25.2783-22.0837,10.2779,0,23.1949,5.139,24.7228,21.6669h-11.5281c-.8334-6.6668-6.25-11.1113-13.3336-11.1113s-12.3613,4.4445-12.3613,10.5558c0,5.4168,3.0556,9.1669,10.5558,11.3892l9.4446,2.7778c13.3336,3.889,18.6115,12.5002,18.6115,22.9171,0,12.7781-10.0003,22.5005-25.9727,22.5005-12.0836,0-26.1116-5.2779-26.945-22.6394Z"/><polygon points="230.8214 109.0303 186.5519 109.0303 186.5519 31.5679 200.0242 31.5679 200.0242 95.5579 230.8214 95.5579 230.8214 109.0303"/><polygon points="259.4748 80.1519 215.2052 80.1519 215.2052 1.6331 228.6776 1.6331 228.6776 66.6796 259.4748 66.6796 259.4748 80.1519"/>
+  </svg>
+  <div class="foot-note">Full Console walkthrough · built from the Jun 15 session, on the Kenya primary config.</div>
+</div>
+</footer>
+
+<script>
+/* ---- data: real Kenya primary config (kinds, fields, references, hierarchy) ---- */
+const DATA={"E":{
+"Counties":{"label":"Counties","kind":"Generic","x":150,"y":30,"w":104,"h":38,"fields":[["Name","Text",null,true],["Regional Manager","Reference","EIDU Staff",false]],"label1":"{Name}","label2":"{Regional Manager}"},
+"SubCounties":{"label":"Sub-Counties","kind":"Generic","x":80,"y":98,"w":116,"h":38,"fields":[["Name","Text",null,true],["County","Reference","Counties",false],["Quality Assurance Officer","Reference","Government Officials",false]],"label1":"{Name}","label2":"{County}"},
+"Units":{"label":"Units","kind":"Generic","x":246,"y":98,"w":96,"h":38,"fields":[["Name","Text",null,true],["Lead EIDU Officer","Reference","EIDU Staff",false],["Associate EIDU Officer","Reference","EIDU Staff",false],["County","Reference","Counties",false]],"label1":"{Name}","label2":"EO: {Lead EIDU Officer}"},
+"Wards":{"label":"Wards","kind":"Generic","x":16,"y":166,"w":80,"h":36,"fields":[["Name","Text",null,true],["Sub-County","Reference","Sub-Counties",false]],"label1":"{Name}","label2":"{Sub-County}"},
+"Zones":{"label":"Zones","kind":"Generic","x":150,"y":166,"w":84,"h":36,"fields":[["Name","Text",null,true],["Unit","Reference","Units",false],["Sub-County","Reference","Sub-Counties",false],["CSO","Reference","Government Officials",false]],"label1":"{Name}","label2":"CSO: {CSO} — Unit: {Unit}"},
+"Townhalls":{"label":"Townhalls","kind":"Generic","x":248,"y":166,"w":100,"h":36,"fields":[["Name","Text",null,true],["Sub-County","Reference","Sub-Counties",false],["Date","Date",null,false]],"label1":"{Name}","label2":"{Sub-County}","flag":"Live config hard-codes a raw GUID into the second label line instead of a field token — worth fixing."},
+"Schools":{"label":"Schools","kind":"School","x":70,"y":240,"w":130,"h":48,"fields":[["Name","Text",null,true],["Sub-County","Reference","Sub-Counties",true],["Zone","Reference","Zones",false],["School Type","Reference","School Types",true],["Curricular Service","Reference","Curricular Service",false],["Treatment Group","Reference","Treatment Groups",false],["Townhall","Reference","Townhalls",false],["Ward","Reference","Wards",false],["Deputy Headteacher","Reference","Government Officials",false],["Device Count","Number",null,false],["Joined EIDU in","Number",null,false]],"label1":"{Name}","label2":"{Sub-County}","flag":"Geography is denormalised: references Sub-County (required) plus Ward, Zone and Townhall, so the same sub-county is reachable several ways. Kept deliberately to mirror production — and it's why picking the shortest path matters."},
+"Teachers":{"label":"Teachers","kind":"User","proposed":true,"x":30,"y":330,"w":104,"h":48,"fields":[["Name","Text",null,true],["School","Reference","Schools",true],["Start of Tenure","Date",null,false],["End of Tenure","Date",null,false]],"label1":"{Name}","label2":"{School}","note":"User kind, so teachers get accounts. Left role-less: they're app users who don't operate the Console. If they ever need Console scoping, add a Teacher Roles lookup mirroring EIDU / Government Roles."},
+"Classes":{"label":"Classes","kind":"Generic","proposed":true,"x":170,"y":330,"w":110,"h":48,"fields":[["Name","Text",null,true],["School","Reference","Schools",true],["Grade","Reference","Grades",true],["Class Teacher","Reference","Teachers",false]],"label1":"{Name}","label2":"{Grade} — {School}","note":"Kenya homeroom model: one class, one grade, one class teacher. Nigeria's per-subject case would need a separate Teaching Assignment join entity — parked."},
+"Grades":{"label":"Grades","kind":"Generic","proposed":true,"x":388,"y":352,"w":114,"h":40,"fields":[["Name","Text",null,true]],"label1":"{Name}","label2":"","note":"New leaf lookup, same shape as Subjects. Seed Grade 1, 2, 3."},
+"Learners":{"label":"Learners","kind":"Generic","proposed":true,"x":170,"y":410,"w":110,"h":48,"fields":[["Name","Text",null,true],["Class","Reference","Classes",true]],"label1":"{Name}","label2":"{Class}","note":"No accounts. Highest-volume entity — the load surface. School and Grade are derived by walking Class, not stored."},
+"EIDURoles":{"label":"EIDU Roles","kind":"Generic","x":388,"y":50,"w":114,"h":40,"fields":[["Name","Text",null,false]],"label1":"{Name}","label2":""},
+"EIDUStaff":{"label":"EIDU Staff","kind":"User","x":518,"y":50,"w":114,"h":40,"fields":[["Name","Text",null,false],["Role","Reference","EIDU Roles",false],["Start of Tenure","Date",null,false],["End of Tenure","Date",null,false]],"label1":"{Name}","label2":""},
+"GovRoles":{"label":"Government Roles","kind":"Generic","x":388,"y":104,"w":114,"h":40,"disp":["Government","Roles"],"fields":[["Name","Text",null,false]],"label1":"{Name}","label2":""},
+"GovOfficials":{"label":"Government Officials","kind":"User","x":518,"y":104,"w":114,"h":40,"disp":["Government","Officials"],"fields":[["Name","Text",null,false],["Role","Reference","Government Roles",false],["Contact Email","Text",null,false],["Contact Phone Number","Text",null,false]],"label1":"{Name}","label2":""},
+"Subjects":{"label":"Subjects","kind":"Generic","x":388,"y":170,"w":114,"h":40,"fields":[["Name","Text",null,false]],"label1":"{Name}","label2":""},
+"CurricularService":{"label":"Curricular Service","kind":"Generic","x":518,"y":170,"w":114,"h":40,"disp":["Curricular","Service"],"fields":[["Name","Text",null,false],["Subject","Reference","Subjects",false],["Comments","Text",null,false]],"label1":"{Name}","label2":"{Subject}"},
+"SchoolTypes":{"label":"School Types","kind":"Generic","x":388,"y":224,"w":114,"h":40,"fields":[["Name","Text",null,false]],"label1":"{Name}","label2":""},
+"TreatmentGroups":{"label":"Treatment Groups","kind":"Generic","x":518,"y":224,"w":114,"h":40,"disp":["Treatment","Groups"],"fields":[["Name","Text",null,false],["Description","Text",null,false]],"label1":"{Name}","label2":""},
+"FormAvailability":{"label":"Form Availability","kind":"Generic","x":388,"y":290,"w":114,"h":40,"disp":["Form","Availability"],"fields":[["Name","Text",null,false]],"label1":"{Name}","label2":""},
+"Forms":{"label":"Forms","kind":"Form","x":518,"y":290,"w":114,"h":40,"fields":[["Name","Text",null,false],["Form Availability","Reference","Form Availability",false],["Form Owner","Reference","EIDU Staff",false]],"label1":"{Name}","label2":""}
+},
+"hier":[["Counties","SubCounties"],["Counties","Units"],["SubCounties","Wards"],["SubCounties","Zones"],["SubCounties","Townhalls"],["Units","Zones"],["SubCounties","Schools"],["Schools","Teachers"],["Schools","Classes"],["Classes","Learners"]],
+"ref":[{"frm":"Counties","to":"EIDUStaff","field":"Regional Manager"},{"frm":"SubCounties","to":"GovOfficials","field":"Quality Assurance Officer"},{"frm":"Units","to":"EIDUStaff","field":"Lead EIDU Officer"},{"frm":"Units","to":"EIDUStaff","field":"Associate EIDU Officer"},{"frm":"Zones","to":"GovOfficials","field":"CSO"},{"frm":"Schools","to":"Zones","field":"Zone"},{"frm":"Schools","to":"SchoolTypes","field":"School Type"},{"frm":"Schools","to":"CurricularService","field":"Curricular Service"},{"frm":"Schools","to":"TreatmentGroups","field":"Treatment Group"},{"frm":"Schools","to":"Townhalls","field":"Townhall"},{"frm":"Schools","to":"Wards","field":"Ward"},{"frm":"Schools","to":"GovOfficials","field":"Deputy Headteacher"},{"frm":"Classes","to":"Grades","field":"Grade"},{"frm":"Classes","to":"Teachers","field":"Class Teacher"},{"frm":"EIDUStaff","to":"EIDURoles","field":"Role"},{"frm":"GovOfficials","to":"GovRoles","field":"Role"},{"frm":"CurricularService","to":"Subjects","field":"Subject"},{"frm":"Forms","to":"FormAvailability","field":"Form Availability"},{"frm":"Forms","to":"EIDUStaff","field":"Form Owner"}],
+"labels":[["people & roles",388,42],["curriculum",388,162],["forms",388,282],["new — enterprise app",388,344]]};
+
+/* ---- map render ---- */
+const E=DATA.E, NS="http://www.w3.org/2000/svg";
+const kindClass={Generic:"k-generic",School:"k-school",User:"k-user",Form:"k-form"};
+function el(n,a){const x=document.createElementNS(NS,n);for(const k in a)x.setAttribute(k,a[k]);return x;}
+function center(id){const b=E[id];return[b.x+b.w/2,b.y+b.h/2];}
+function onRect(id,tx,ty){const b=E[id],cx=b.x+b.w/2,cy=b.y+b.h/2;let dx=tx-cx,dy=ty-cy;if(!dx&&!dy)return[cx,cy];const sx=dx?(b.w/2)/Math.abs(dx):1e9,sy=dy?(b.h/2)/Math.abs(dy):1e9,s=Math.min(sx,sy);return[cx+dx*s,cy+dy*s];}
+function edgePath(a,bid){const[ax,ay]=center(a),[bx,by]=center(bid),[x1,y1]=onRect(a,bx,by),[x2,y2]=onRect(bid,ax,ay);return[x1,y1,x2,y2];}
+const svg=el("svg",{viewBox:"0 0 660 480",role:"img",class:"map"});
+const t=el("title",{});t.textContent="Kenya primary entity configuration map";svg.appendChild(t);
+const defs=el("defs",{});
+defs.innerHTML='<marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></marker>';
+svg.appendChild(defs);
+DATA.labels.forEach(([txt,x,y])=>{const e=el("text",{x,y,class:"glabel"});e.textContent=txt;svg.appendChild(e);});
+DATA.hier.forEach(([a,b])=>{const[x1,y1,x2,y2]=edgePath(a,b);svg.appendChild(el("line",{x1,y1,x2,y2,class:"heredge","marker-end":"url(#arrow)"}));});
+DATA.ref.forEach(r=>{const[x1,y1,x2,y2]=edgePath(r.frm,r.to);svg.appendChild(el("line",{x1,y1,x2,y2,class:"refedge","data-from":r.frm,"marker-end":"url(#arrow)"}));});
+const nodeEls={};
+for(const id in E){const b=E[id];
+  const g=el("g",{class:"node "+kindClass[b.kind]+(b.proposed?" proposed":""),"data-id":id,tabindex:"0",role:"button","aria-label":b.label+", "+b.kind+" kind"});
+  g.appendChild(el("rect",{x:b.x,y:b.y,width:b.w,height:b.h,rx:9,"stroke-width":.7}));
+  const cx=b.x+b.w/2,cy=b.y+b.h/2;
+  let lines=(b.disp||[b.label]).map(s=>({t:s,c:"th"}));
+  if(b.proposed)lines.push({t:"new",c:"ts"});
+  const lh=14,sy=cy-(lines.length-1)*lh/2;
+  lines.forEach((L,i)=>{const e=el("text",{x:cx,y:sy+i*lh,class:L.c,"text-anchor":"middle","dominant-baseline":"central"});e.textContent=L.t;g.appendChild(e);});
+  g.addEventListener("click",()=>select(id));
+  g.addEventListener("keydown",ev=>{if(ev.key==="Enter"||ev.key===" "){ev.preventDefault();select(id);}});
+  svg.appendChild(g);nodeEls[id]=g;}
+document.getElementById("svghost").appendChild(svg);
+
+function refsOut(id){return DATA.ref.filter(r=>r.frm===id);}
+function ownerOut(id){return DATA.hier.filter(h=>h[0]===id).map(h=>h[1]);}
+function referencedBy(id){const a=DATA.ref.filter(r=>r.to===id).map(r=>r.frm),b=DATA.hier.filter(h=>h[1]===id).map(h=>h[0]);return[...new Set([...a,...b])];}
+function select(id){
+  Object.values(nodeEls).forEach(n=>{n.classList.remove("active");n.classList.add("dim");});
+  svg.querySelectorAll(".refedge").forEach(l=>l.classList.remove("show"));
+  new Set([id,...refsOut(id).map(r=>r.to),...ownerOut(id),...referencedBy(id)]).forEach(k=>nodeEls[k]&&nodeEls[k].classList.remove("dim"));
+  nodeEls[id].classList.add("active");
+  svg.querySelectorAll('.refedge[data-from="'+id+'"]').forEach(l=>l.classList.add("show"));
+  renderPanel(id);
+}
+const kindTag={Generic:["#EFEEE9","#02424C"],School:["#02424C","#EFEEE9"],User:["#7FCDD1","#04353c"],Form:["#CEC7BF","#02424C"]};
+function renderPanel(id){
+  const b=E[id],[bg,fg]=kindTag[b.kind];
+  let h='<span class="ptag" style="background:'+bg+';color:'+fg+'">'+b.kind+' kind</span>';
+  h+='<div class="pname">'+b.label+'</div><div class="pkind">'+(b.proposed?"proposed · enterprise app":"in production")+'</div>';
+  h+='<div class="psec">fields</div>';
+  b.fields.forEach(f=>{const[fn,ft,tgt,req]=f,ty=ft==="Reference"?("\u2192 "+tgt):ft;h+='<div class="frow"><span class="fname">'+fn+(req?' <span class="reqd">*</span>':'')+'</span><span class="ftype">'+ty+'</span></div>';});
+  h+='<div class="psec">label shown in lists</div><div class="reflist">1 &middot; <b>'+b.label1+'</b>'+(b.label2?'<br>2 &middot; '+b.label2:'')+'</div>';
+  const rb=referencedBy(id);
+  if(rb.length){h+='<div class="psec">referenced by</div><div class="reflist">'+rb.map(x=>E[x].label).join(', ')+'</div>';}
+  if(b.note)h+='<div class="newbox"><strong>New:</strong> '+b.note+'</div>';
+  if(b.flag)h+='<div class="flagbox"><strong>Note:</strong> '+b.flag+'</div>';
+  document.getElementById("panel").innerHTML=h;
+}
+
+/* ---- path tracer: curated, real scoping paths ---- */
+const SCEN={
+ "QA Officer":{kind:"Government Official",targets:{
+   "Schools":{chain:[
+     {n:"QA Officer",k:"Government Official"},
+     {via:"is the QAO on",n:"Sub-Counties",k:"Generic"},
+     {via:"which contains",n:"Schools",k:"School",target:true}],
+     reading:"A <b>QA Officer</b> sees the schools in the sub-county they're assigned to as QAO — the system walks from the officer, to the sub-county that names them, down to its schools.",
+     rt:"Shortest path",
+     rule:"A school also reaches a sub-county through its Ward and its Zone. Those routes exist in the picker too — but Sub-County is the direct field, so that's the one to use. Longer routes scope the same thing more fragilely."},
+   "Deputy Head Teachers":{chain:[
+     {n:"QA Officer",k:"Government Official"},
+     {via:"is the QAO on",n:"Sub-Counties",k:"Generic"},
+     {via:"which contains",n:"Schools",k:"School"},
+     {via:"whose Deputy Headteacher is",n:"Government Officials",k:"User",target:true}],
+     reading:"Following the same spine one hop further, a <b>QA Officer</b> sees the deputy head teachers of the schools in their sub-county.",
+     rt:"One hop at a time",
+     rule:"Each link is declared explicitly. The Console never auto-extends a path — if you stop at Schools, the officer never reaches the people on those schools."}}},
+ "CSO":{kind:"Government Official",targets:{
+   "Schools":{chain:[
+     {n:"CSO",k:"Government Official"},
+     {via:"is the CSO on",n:"Zones",k:"Generic"},
+     {via:"which contains",n:"Schools",k:"School",target:true}],
+     reading:"A <b>CSO</b> sees the schools in the zone they're assigned to. The CSO sits directly on the Zone, so the route to schools is one hop shorter than the QA Officer's.",
+     rt:"Anchor point matters",
+     rule:"Where a role attaches changes the path length. CSO on Zone is closer to schools than QAO on Sub-County — same idea, fewer hops."}}},
+ "Lead EIDU Officer":{kind:"EIDU Staff",targets:{
+   "Schools":{chain:[
+     {n:"Lead EIDU Officer",k:"EIDU Staff"},
+     {via:"is the lead on",n:"Units",k:"Generic"},
+     {via:"which owns",n:"Zones",k:"Generic"},
+     {via:"which contains",n:"Schools",k:"School",target:true}],
+     reading:"A <b>Lead EIDU Officer</b> sees the schools in the zones under the unit they lead.",
+     rt:"One path per field",
+     rule:"A Unit has TWO officer fields — Lead EIDU Officer and Associate EIDU Officer. This path only covers the lead. An associate officer needs a second, near-identical path anchored on the other field. Two officers, two fields, two paths — this is the gotcha that makes access control grow messy."}}},
+ "Associate EIDU Officer":{kind:"EIDU Staff",targets:{
+   "Schools":{chain:[
+     {n:"Associate EIDU Officer",k:"EIDU Staff"},
+     {via:"is the associate on",n:"Units",k:"Generic"},
+     {via:"which owns",n:"Zones",k:"Generic"},
+     {via:"which contains",n:"Schools",k:"School",target:true}],
+     reading:"Same chain as the lead officer, but anchored on the <b>Associate EIDU Officer</b> field — which is exactly why it has to be configured as its own separate path.",
+     rt:"One path per field",
+     rule:"Because a list field can't hold two people, the second officer lives in a second field. Access control can't merge them — you maintain one path for each."}}}
+};
+const kindCol={ "Government Official":"User","EIDU Staff":"User","Generic":"Generic","School":"School","User":"User" };
+const roleSel=document.getElementById("role"),targetSel=document.getElementById("target");
+Object.keys(SCEN).forEach(r=>{const o=document.createElement("option");o.value=r;o.textContent=r;roleSel.appendChild(o);});
+function fillTargets(){targetSel.innerHTML="";Object.keys(SCEN[roleSel.value].targets).forEach(t=>{const o=document.createElement("option");o.value=t;o.textContent=t;targetSel.appendChild(o);});}
+function renderChain(){
+  const sc=SCEN[roleSel.value].targets[targetSel.value],c=sc.chain;
+  let h="";
+  c.forEach((step,i)=>{
+    if(step.via)h+='<div class="conn"><span class="via">'+step.via+'</span><span class="arrow">&rarr;</span></div>';
+    const cls=i===0?"role":(step.target?"target":"mid");
+    h+='<div class="chip '+cls+'"><span class="cn">'+step.n+'</span><span class="ck">'+step.k+'</span></div>';
+  });
+  document.getElementById("chain").innerHTML=h;
+  document.getElementById("reading").innerHTML=sc.reading;
+  document.getElementById("rule").innerHTML='<span class="rt">'+sc.rt+'</span>'+sc.rule;
+}
+roleSel.addEventListener("change",()=>{fillTargets();renderChain();});
+targetSel.addEventListener("change",renderChain);
+fillTargets();renderChain();
+
+/* ---- semantic-links toggle ---- */
+const SL=[
+ {n:"EIDU Staff",k:"User"},
+ {via:"is the lead on",n:"Units",k:"Generic"},
+ {via:"which owns",n:"Zones",k:"Generic"},
+ {via:"which contains",n:"Schools",k:"School"}];
+function renderSL(state){
+  const litUpto = state==='B' ? SL.length-1 : 1;
+  let h="";
+  SL.forEach((s,i)=>{
+    const lit=i<=litUpto, off=lit?"":" off";
+    if(s.via)h+='<div class="conn'+off+'"><span class="via">'+s.via+'</span><span class="arrow">&rarr;</span></div>';
+    const base=i===0?"role":(i===SL.length-1?"target":"mid");
+    h+='<div class="chip '+base+off+'"><span class="cn">'+s.n+'</span><span class="ck">'+s.k+'</span></div>';
+  });
+  document.getElementById("slchain").innerHTML=h;
+  document.getElementById("slcap").innerHTML = state==='B'
+    ? 'With a semantic link, the whole route is declared once — analytics can walk <b>EIDU Staff all the way to Schools</b>, even though the entities only reference one hop at a time.'
+    : 'On its own the system only knows the <b>next</b> reference. It sees EIDU Staff &rarr; Units and stops — it has no idea Units lead to Zones lead to Schools.';
+  document.getElementById("slA").classList.toggle("on",state==='A');
+  document.getElementById("slB").classList.toggle("on",state==='B');
+}
+document.getElementById("slA").addEventListener("click",()=>renderSL('A'));
+document.getElementById("slB").addEventListener("click",()=>renderSL('B'));
+renderSL('A');
+</script>
+</body></html>
