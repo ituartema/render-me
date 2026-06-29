@@ -1,0 +1,967 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Enterprise app — working map</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --teal:#02424C; --ink:#0E3138;
+    --egg:#EFEEE9; --paper:#FBFAF6; --line:#D8D4CA; --muted:#6A7E80;
+    --s-settled:#1E6B73; --s-explore:#3C6E9F; --s-decision:#C0492B;
+    --s-contested:#B26A12; --s-parked:#8A8170;
+    --font:"Space Grotesk",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{height:100%;}
+  body{font-family:var(--font);background:var(--egg);color:var(--ink);-webkit-font-smoothing:antialiased;line-height:1.5;}
+  .app{display:flex;height:100vh;overflow:hidden;}
+
+  .sidebar{width:226px;flex:none;background:var(--teal);color:var(--egg);padding:24px 0;display:flex;flex-direction:column;overflow-y:auto;}
+  .sidebar .brand{display:flex;align-items:center;gap:10px;padding:0 22px 22px;}
+  .sidebar .brand svg{width:26px;height:26px;}
+  .sidebar .brand b{font-size:13px;font-weight:600;letter-spacing:.02em;}
+  .sidebar nav{display:flex;flex-direction:column;}
+  .sidebar a{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:11px 22px;font-size:13.5px;color:#B9CDCF;text-decoration:none;border-left:3px solid transparent;cursor:pointer;transition:all .15s;}
+  .sidebar a:hover{color:var(--egg);background:rgba(255,255,255,.04);}
+  .sidebar a.active{color:var(--egg);border-left-color:var(--s-decision);background:rgba(255,255,255,.06);font-weight:600;}
+  .sidebar a.overview{color:#EBFC6F;}
+  .sidebar a .dec{width:7px;height:7px;border-radius:50%;background:var(--s-decision);flex:none;}
+  .sidebar .sep{height:1px;background:rgba(255,255,255,.10);margin:10px 22px;}
+
+  .stage{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+  header{padding:20px 34px 16px;border-bottom:1px solid var(--line);flex:none;background:var(--egg);}
+  header h1{font-size:19px;font-weight:600;letter-spacing:-.01em;}
+  header p{font-size:12.5px;color:var(--muted);margin-top:3px;max-width:74ch;}
+  .legend{display:flex;flex-wrap:wrap;gap:7px;margin-top:13px;align-items:center;}
+  .legend .lbl{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-right:3px;}
+  .chipf{font-size:11.5px;border:1px solid var(--line);background:var(--paper);border-radius:99px;padding:4px 11px;cursor:pointer;font-family:inherit;color:var(--ink);display:flex;align-items:center;gap:6px;transition:all .15s;}
+  .chipf:hover{border-color:var(--muted);}
+  .chipf .sw{width:9px;height:9px;border-radius:50%;}
+  .chipf[data-s="settled"] .sw{background:var(--s-settled);}
+  .chipf[data-s="explore"] .sw{background:var(--s-explore);}
+  .chipf[data-s="decision"] .sw{background:var(--s-decision);}
+  .chipf[data-s="contested"] .sw{background:var(--s-contested);}
+  .chipf[data-s="parked"] .sw{background:var(--s-parked);}
+  .chipf.off{opacity:.35;}
+
+  .body{flex:1;display:flex;overflow:hidden;}
+  .main{flex:1;overflow-y:auto;padding:30px 34px 80px;}
+  .col{max-width:880px;margin:0 auto;}
+  .page-head{margin-bottom:22px;}
+  .page-head h2{font-size:24px;font-weight:600;letter-spacing:-.01em;}
+  .page-head .ps{font-size:13.5px;color:var(--muted);margin-top:5px;max-width:66ch;}
+
+  .area{margin-bottom:28px;}
+  .area h3{font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--teal);margin-bottom:4px;}
+  .area .sub{font-size:12px;color:var(--muted);margin-bottom:13px;max-width:64ch;}
+
+  /* bespoke Scope lattice */
+  .primitive{background:var(--teal);color:var(--egg);border-radius:14px;padding:18px 22px;margin-bottom:18px;}
+  .primitive .prim-h{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:#EBFC6F;font-weight:600;margin-bottom:8px;}
+  .primitive p{font-size:14px;line-height:1.6;max-width:84ch;}
+  .primitive b{color:#EBFC6F;font-weight:600;}
+  .primitive .prim-cases{display:flex;flex-wrap:wrap;gap:8px;margin-top:13px;}
+  .primitive .pc{font-size:11.5px;background:rgba(255,255,255,.08);border:1px solid var(--teal-line,#1C6772);border-radius:99px;padding:4px 11px;color:var(--egg);}
+  .lattice{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:20px 22px 18px;margin-bottom:26px;}
+  .lat-cap{font-size:12.5px;color:var(--muted);line-height:1.5;margin-bottom:6px;max-width:80ch;}
+  .lat-cap b{color:var(--teal);font-weight:600;}
+  .latsvg{width:100%;height:auto;display:block;margin:4px 0 2px;}
+  .latsvg .edge{stroke:var(--line);stroke-width:2;transition:stroke .18s,stroke-width .18s;}
+  .latsvg .edge.lit{stroke:var(--s-decision);stroke-width:3.5;}
+  .latsvg .lnode circle{fill:var(--egg);stroke:var(--muted);stroke-width:2;transition:fill .15s,stroke .15s;}
+  .latsvg .lnode.lit circle{fill:var(--s-decision);stroke:var(--s-decision);}
+  .latsvg .lnlbl{font-family:var(--font);font-size:12px;fill:var(--ink);font-weight:600;}
+  .latsvg .lnrole{font-family:var(--font);font-size:10.5px;fill:var(--muted);}
+  .latsvg .lnode.lit .lnlbl{fill:var(--s-decision);}
+  .latsvg .col-cap{font-family:var(--font);font-size:10px;letter-spacing:.12em;text-transform:uppercase;fill:var(--muted);}
+  .lat-legendrow{display:flex;flex-wrap:wrap;gap:7px;margin-top:6px;}
+  .rl{font-size:12px;border:1px solid var(--line);background:var(--egg);border-radius:99px;padding:5px 12px;cursor:pointer;transition:all .15s;}
+  .rl:hover{border-color:var(--s-decision);color:var(--s-decision);}
+  .rl.on{background:var(--s-decision);color:#fff;border-color:var(--s-decision);}
+  .rl.clearr{color:var(--muted);border-style:dashed;}
+  .reach-note{font-size:12.5px;color:#33484C;line-height:1.5;margin-top:12px;background:rgba(192,73,43,.05);border-left:3px solid var(--s-decision);padding:9px 13px;border-radius:0 8px 8px 0;}
+  .sub-h{font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--teal);margin:4px 0 13px;}
+  .doesnt{margin-top:26px;border:1px dashed var(--line);border-radius:12px;padding:16px 18px;background:rgba(106,126,128,.05);}
+  .doesnt-h{font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:8px;}
+  .doesnt p{font-size:13px;line-height:1.55;color:#33484C;margin-bottom:12px;max-width:80ch;}
+  .doesnt b{color:var(--teal);font-weight:600;}
+  .doesnt .conns{display:flex;flex-wrap:wrap;gap:7px;}
+  .doesnt .conns button{font-size:12px;border:1px solid var(--line);background:var(--paper);border-radius:99px;padding:5px 11px;cursor:pointer;font-family:inherit;color:var(--ink);transition:all .15s;}
+  .doesnt .conns button:hover{border-color:var(--s-decision);color:var(--s-decision);}
+
+  /* bespoke Vocabulary ladder */
+  .ladder-wrap{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:20px 22px 18px;margin-bottom:26px;}
+  .lad-cap{font-size:12.5px;color:var(--muted);line-height:1.5;margin-bottom:16px;max-width:82ch;}
+  .lad-cap b{color:var(--teal);font-weight:600;}
+  .ladder{display:flex;flex-direction:column;gap:10px;}
+  .lad-row{position:relative;display:flex;align-items:center;gap:14px;background:var(--egg);border:1px solid var(--line);border-left:4px solid var(--s-explore);border-radius:11px;padding:12px 16px;cursor:pointer;transition:all .15s;}
+  .lad-row:hover{transform:translateX(2px);box-shadow:0 5px 14px rgba(2,66,76,.08);}
+  .lad-row.on{border-color:var(--teal);border-left-color:var(--teal);box-shadow:0 0 0 2px rgba(2,66,76,.15);background:#fff;}
+  .lad-row.near{border-left-color:var(--teal);}
+  .lad-body{flex:1;}
+  .lad-title{font-size:15px;font-weight:600;color:var(--ink);}
+  .lad-role{font-size:12px;color:var(--teal);margin-top:1px;}
+  .lad-eg{font-size:11.5px;color:var(--muted);margin-top:3px;font-style:italic;}
+  .lad-down{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);white-space:nowrap;}
+  .lens{margin-top:18px;padding-top:16px;border-top:1px dashed var(--line);}
+  .lens-tag{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;}
+  .lens-card{display:block;width:100%;text-align:left;background:var(--egg);border:1px dashed var(--muted);border-radius:11px;padding:12px 16px;cursor:pointer;font-family:inherit;transition:all .15s;}
+  .lens-card:hover{border-color:var(--teal);background:#fff;}
+  .lens-card .nt{font-size:14px;font-weight:600;color:var(--ink);}
+  .lens-card .ns{font-size:11.5px;color:var(--muted);margin-top:3px;}
+  .lad-note{font-size:12px;color:#33484C;line-height:1.5;margin-top:16px;background:rgba(60,110,159,.07);border-left:3px solid var(--s-explore);padding:9px 13px;border-radius:0 8px 8px 0;}
+  .lad-note b{color:var(--teal);font-weight:600;}
+
+  /* bespoke Composition reference graph */
+  .graph-wrap{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:20px 22px 18px;margin-bottom:26px;}
+  .gr-cap{font-size:12.5px;color:var(--muted);line-height:1.5;margin-bottom:14px;max-width:82ch;}
+  .gr-cap b{color:var(--teal);font-weight:600;}
+  .gsvg{width:100%;height:auto;display:block;}
+  .gsvg .gcol{font-family:var(--font);font-size:10px;letter-spacing:.1em;text-transform:uppercase;fill:var(--muted);}
+  .gsvg .gedge{stroke-width:1.6;transition:stroke .15s,stroke-width .15s,opacity .15s;opacity:.45;}
+  .gsvg .gedge.ref{stroke:var(--s-explore);}
+  .gsvg .gedge.bind{stroke:var(--s-contested);stroke-dasharray:4 3;}
+  .gsvg .gedge.lit{opacity:1;stroke-width:3;}
+  .gsvg .gnode rect{fill:var(--egg);stroke:var(--line);stroke-width:1.5;transition:fill .15s,stroke .15s;cursor:pointer;}
+  .gsvg .gnode .glbl{font-family:var(--font);font-size:10.5px;fill:var(--ink);cursor:pointer;pointer-events:none;}
+  .gsvg .gnode.k-p rect{border-left:0;stroke:var(--s-explore);}
+  .gsvg .gnode.k-x rect{stroke:var(--s-contested);}
+  .gsvg .gnode:hover rect{stroke:var(--teal);}
+  .gsvg .gnode.lit rect{fill:#fff;stroke:var(--teal);stroke-width:2;}
+  .gsvg .gnode.sel rect{fill:var(--teal);}
+  .gsvg .gnode.sel .glbl{fill:var(--egg);}
+  .gsvg .gnode.shared rect{stroke:var(--teal);stroke-width:2;stroke-dasharray:3 2;}
+  .gsvg .gshare{font-family:var(--font);font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;fill:var(--teal);font-weight:600;}
+  .gr-key{display:flex;gap:18px;margin-top:10px;flex-wrap:wrap;}
+  .gr-key .gk{font-size:11.5px;color:var(--muted);display:flex;align-items:center;gap:7px;}
+  .gr-key .gk i{width:18px;height:0;border-top:2px solid;display:inline-block;}
+  .gr-key .kref{border-color:var(--s-explore);}
+  .gr-key .kbind{border-top-style:dashed!important;border-color:var(--s-contested);}
+  .gr-key .illus{font-style:italic;color:var(--s-decision);}
+  .gr-note{font-size:12px;color:#33484C;line-height:1.5;margin-top:14px;background:rgba(178,106,18,.07);border-left:3px solid var(--s-contested);padding:9px 13px;border-radius:0 8px 8px 0;}
+  .gr-note b{color:var(--teal);font-weight:600;}
+
+  /* Architecture stack */
+  .stack-wrap{display:grid;grid-template-columns:1fr 230px;gap:16px;margin-bottom:26px;}
+  .stk-cap{grid-column:1/-1;font-size:12.5px;color:var(--muted);line-height:1.5;max-width:82ch;}
+  .stk-cap b{color:var(--teal);font-weight:600;}
+  .stack{display:flex;flex-direction:column;gap:10px;}
+  .stk-band{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:13px 16px;cursor:pointer;transition:all .15s;}
+  .stk-band:hover{box-shadow:0 5px 14px rgba(2,66,76,.08);}
+  .stk-band.lvl-role{border-left:4px solid var(--s-contested);}
+  .stk-band.lvl-cap{border-left:4px solid var(--s-explore);cursor:default;}
+  .stk-band.lvl-data{border-left:4px solid var(--s-settled);}
+  .stk-tier{font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:4px;}
+  .stk-term{font-size:15px;font-weight:600;color:var(--ink);display:flex;align-items:center;gap:9px;flex-wrap:wrap;}
+  .stk-desc{font-size:12px;color:var(--muted);margin-top:3px;}
+  .stk-flag{font-size:9.5px;letter-spacing:.04em;text-transform:uppercase;font-weight:600;padding:2px 7px;border-radius:99px;}
+  .stk-flag.warn{background:rgba(178,106,18,.12);color:var(--s-contested);}
+  .stk-flag.ok{background:rgba(30,107,115,.12);color:var(--s-settled);}
+  .stk-fork{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:2px;}
+  .stk-card{flex:1 1 150px;text-align:left;background:var(--egg);border:1px solid var(--line);border-radius:9px;padding:9px 12px;cursor:pointer;font-family:inherit;transition:all .15s;}
+  .stk-card:hover{border-color:var(--teal);}
+  .stk-card b{display:block;font-size:13.5px;color:var(--ink);}
+  .stk-card span{font-size:11px;color:var(--muted);}
+  .stk-card.warn{border-style:dashed;border-color:var(--s-contested);}
+  .stk-vs{font-size:10.5px;color:var(--s-contested);font-style:italic;white-space:nowrap;}
+  .stk-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px;}
+  .stk-chips .chip{font-size:11.5px;border:1px solid var(--line);background:var(--egg);border-radius:99px;padding:4px 11px;cursor:pointer;font-family:inherit;color:var(--ink);transition:all .15s;}
+  .stk-chips .chip:hover{border-color:var(--teal);color:var(--teal);}
+  .stk-rail{display:flex;flex-direction:column;gap:10px;}
+  .rail-card{text-align:left;background:var(--teal);color:var(--egg);border:none;border-radius:12px;padding:13px 15px;cursor:pointer;font-family:inherit;font-size:12px;line-height:1.45;transition:opacity .15s;}
+  .rail-card:hover{opacity:.92;}
+  .rail-card b{color:#EBFC6F;}
+  .rail-card.pend{background:var(--paper);color:var(--ink);border:1px dashed var(--s-contested);}
+  .rail-card.pend b{color:var(--s-contested);}
+
+  /* Live decisions tiers */
+  .rank-note{font-size:12px;color:#33484C;background:rgba(192,73,43,.06);border-left:3px solid var(--s-decision);padding:9px 13px;border-radius:0 8px 8px 0;margin-bottom:20px;line-height:1.5;}
+  .rank-note b{color:var(--teal);font-weight:600;}
+  .tier{margin-bottom:24px;}
+  .tier-h{display:flex;align-items:baseline;gap:10px;margin-bottom:12px;flex-wrap:wrap;}
+  .tier-n{align-self:center;display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:var(--teal);color:var(--egg);font-size:12px;font-weight:600;flex:none;}
+  .tier-h .th{font-size:15px;font-weight:600;color:var(--ink);}
+  .tier-sub{font-size:12px;color:var(--muted);}
+
+  /* Origin funnel */
+  .funnel-wrap{margin-bottom:26px;}
+  .fn-cap{font-size:12.5px;color:var(--muted);line-height:1.5;max-width:80ch;margin-bottom:14px;}
+  .funnel{display:flex;flex-direction:column;align-items:center;gap:8px;}
+  .fn-stage{text-align:center;background:var(--paper);border:1px solid var(--line);border-top:3px solid var(--s-explore);border-radius:10px;padding:12px 16px;cursor:pointer;font-family:inherit;transition:all .15s;}
+  .fn-stage:hover{box-shadow:0 5px 14px rgba(2,66,76,.08);transform:translateY(-1px);}
+  .fn-stage b{display:block;font-size:14px;color:var(--ink);}
+  .fn-stage span{font-size:11.5px;color:var(--muted);}
+  .fn-stage.w1{width:100%;}
+  .fn-stage.w2{width:80%;}
+  .fn-stage.w3{width:62%;}
+  .fn-stage.w4{width:46%;border-top-color:var(--s-decision);}
+  .fn-note{font-size:12px;color:#33484C;background:rgba(60,110,159,.07);border-left:3px solid var(--s-explore);padding:9px 13px;border-radius:0 8px 8px 0;margin-top:16px;line-height:1.5;}
+  .fn-note b,.fn-cap b{color:var(--teal);font-weight:600;}
+  .nodes{display:flex;flex-wrap:wrap;gap:11px;}
+  .node{border:1px solid var(--line);background:var(--paper);border-radius:12px;padding:13px 15px;cursor:pointer;min-width:175px;max-width:250px;flex:1 1 200px;border-left:4px solid var(--s-settled);transition:all .15s;position:relative;}
+  .node:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(2,66,76,.10);}
+  .node[data-s="settled"]{border-left-color:var(--s-settled);}
+  .node[data-s="explore"]{border-left-color:var(--s-explore);}
+  .node[data-s="decision"]{border-left-color:var(--s-decision);}
+  .node[data-s="contested"]{border-left-color:var(--s-contested);}
+  .node[data-s="parked"]{border-left-color:var(--s-parked);}
+  .node.dim{opacity:.22;}
+  .node.sel{box-shadow:0 0 0 2px var(--teal);}
+  .node .nt{font-size:14px;font-weight:600;line-height:1.25;}
+  .node .ns{font-size:11.5px;color:var(--muted);margin-top:4px;line-height:1.35;}
+  .node .flag{display:inline-block;font-size:9px;letter-spacing:.06em;text-transform:uppercase;font-weight:600;margin-bottom:6px;color:var(--muted);}
+  .node[data-s="decision"] .flag{color:var(--s-decision);}
+  .node[data-s="contested"] .flag{color:var(--s-contested);}
+
+  .panel{width:0;flex:none;background:var(--paper);border-left:1px solid var(--line);overflow-y:auto;transition:width .22s ease;}
+  .panel.open{width:412px;}
+  .panel-inner{padding:24px 24px 60px;width:412px;}
+  .panel .close{float:right;border:none;background:none;font-size:22px;color:var(--muted);cursor:pointer;line-height:1;}
+  .panel .pstatus{display:inline-flex;align-items:center;gap:7px;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;font-weight:600;margin-bottom:10px;}
+  .panel .pstatus .sw{width:9px;height:9px;border-radius:50%;}
+  .panel h3{font-size:20px;font-weight:600;letter-spacing:-.01em;line-height:1.2;margin-bottom:13px;}
+  .panel .area-of{font-size:11px;color:var(--muted);margin-bottom:14px;}
+  .panel .area-of b{color:var(--teal);font-weight:600;cursor:pointer;}
+  .panel .mine{font-size:14.5px;line-height:1.55;margin-bottom:15px;}
+  .panel .detail{font-size:13.5px;line-height:1.6;color:#33484C;margin-bottom:17px;}
+  .panel .q{border-left:3px solid var(--s-decision);background:rgba(192,73,43,.06);padding:11px 13px;border-radius:0 8px 8px 0;font-size:13px;line-height:1.5;margin-bottom:17px;}
+  .panel .q .ql{font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--s-decision);font-weight:600;display:block;margin-bottom:5px;}
+  .panel .blk-l{font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:18px 0 9px;}
+  .panel .conns{display:flex;flex-wrap:wrap;gap:7px;}
+  .panel .conns button{font-size:12px;border:1px solid var(--line);background:var(--egg);border-radius:99px;padding:5px 11px;cursor:pointer;font-family:inherit;color:var(--ink);transition:all .15s;}
+  .panel .conns button:hover{border-color:var(--teal);color:var(--teal);}
+  .panel .refs{display:flex;flex-direction:column;gap:6px;}
+  .panel .refs a{font-size:12.5px;color:var(--teal);text-decoration:none;border:1px solid var(--line);border-radius:8px;padding:8px 11px;background:var(--egg);transition:all .15s;display:flex;justify-content:space-between;align-items:center;gap:8px;}
+  .panel .refs a:hover{border-color:var(--teal);background:#fff;}
+  .panel .refs a .arr{opacity:.5;font-size:13px;}
+
+  :focus-visible{outline:2px solid var(--teal);outline-offset:2px;}
+  @media (max-width:860px){
+    .sidebar{width:64px;}
+    .sidebar .brand b, .sidebar a span.t{display:none;}
+    .panel.open{width:100vw;position:fixed;inset:0;z-index:50;}
+    .panel-inner{width:100%;}
+  }
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;}}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <svg viewBox="0 0 350 350" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <path fill="#EBFC6F" d="M175,350c96.6482,0,175-78.3421,175-175.0062S271.6482,0,175,0,0,78.3421,0,174.9938s78.3517,175.0062,175,175.0062"/>
+        <polygon fill="#02424C" points="205.1957 272.909 107.7703 272.909 107.7703 122.1501 137.4193 122.1501 137.4193 243.26 205.1957 243.26 205.1957 272.909"/>
+        <polygon fill="#02424C" points="268.2541 209.3555 170.8286 209.3555 170.8286 56.2715 200.4776 56.2715 200.4776 179.7065 268.2541 179.7065 268.2541 209.3555"/>
+      </svg>
+      <b>Working map</b>
+    </div>
+    <nav id="menu"></nav>
+  </aside>
+
+  <div class="stage">
+    <header>
+      <h1 id="hTitle">Enterprise app — working map</h1>
+      <p>Colour shows where each piece stands. Click any node for the detail, what it connects to, and real links to the Notion docs. Red marks live decisions.</p>
+      <div class="legend" id="legend">
+        <span class="lbl">Filter</span>
+        <button class="chipf" data-s="settled"><span class="sw"></span>Settled</button>
+        <button class="chipf" data-s="explore"><span class="sw"></span>Exploring</button>
+        <button class="chipf" data-s="decision"><span class="sw"></span>Open decision</button>
+        <button class="chipf" data-s="contested"><span class="sw"></span>Contested</button>
+        <button class="chipf" data-s="parked"><span class="sw"></span>Parked / waiting</button>
+      </div>
+    </header>
+    <div class="body">
+      <main class="main"><div class="col" id="col"></div></main>
+      <aside class="panel" id="panel" aria-live="polite"><div class="panel-inner" id="panelInner"></div></aside>
+    </div>
+  </div>
+</div>
+
+<script>
+// --- real, verified Notion links ---
+var L = {
+  qScope:  {l:"Open question: What is scope in our system", u:"https://app.notion.com/p/38c972ac4b97810c8e57ced48512e091"},
+  qRole:   {l:"Open question: Why role changes break access / persona configs", u:"https://app.notion.com/p/38c972ac4b9781fe8c92ff671ad50066"},
+  adr:     {l:"ADR (decided): Cross-org sharing via shared versioned log", u:"https://app.notion.com/p/36d972ac4b9781b68436c6e02ff8bd19"},
+  orgless: {l:"Open question: Org-bound vs org-less (the deferred one)", u:"https://app.notion.com/p/372972ac4b9781b891c9c7c028e98350"},
+  xstore:  {l:"Open question: Model for the cross-org asset store", u:"https://app.notion.com/p/357972ac4b97818ca424da9dab45c4c9"},
+  qReads:  {l:"Open question: Reading submissions separately from filling", u:"https://app.notion.com/p/386972ac4b97809daa5df2ea08c18808"},
+  qLists:  {l:"Open question: Do we need lists of reference entities?", u:"https://app.notion.com/p/37a972ac4b9780118b09d068c7905932"},
+  qMulti:  {l:"Open question: Multi-directional discoverability", u:"https://app.notion.com/p/386972ac4b9780afadfbf3f9dd039fee"},
+  workmod: {l:"Working model: who reads whose submissions", u:"https://app.notion.com/p/383972ac4b978006bcfdf4f50103ab14"}
+};
+
+var STATUS = {
+  settled:{label:"Settled", c:"var(--s-settled)"},
+  explore:{label:"Exploring", c:"var(--s-explore)"},
+  decision:{label:"Open decision", c:"var(--s-decision)"},
+  contested:{label:"Contested / undefined", c:"var(--s-contested)"},
+  parked:{label:"Parked / waiting", c:"var(--s-parked)"}
+};
+var AREAS = [
+  {id:"shift", name:"The core idea", sub:"The one move everything else hangs off."},
+  {id:"vocab", name:"Product vocabulary", sub:"Our own language, defined by us before handing it to engineering."},
+  {id:"comp", name:"The composition model", sub:"How personas, activities, tools and assets fit together. Newest, least settled."},
+  {id:"scope", name:"Scope", sub:"Which data a user can see. The foundational gap."},
+  {id:"arch", name:"Architecture primitives", sub:"Engineering's vocabulary. Ours to map onto, theirs to define."},
+  {id:"decisions", name:"Live decisions & seams", sub:"The forks where product need meets an undecided primitive. The work."},
+  {id:"origin", name:"Origin: form submissions", sub:"Where this started. Mostly parked, waiting on people."}
+];
+var NODES = [
+  {id:"shift", area:"shift", t:"Organise around activities, not forms", s:"settled", ns:"The thesis the whole reframe rests on.",
+   mine:"Stop organising the app around a flat list of forms. Organise around the activities people actually do in the field. A form becomes one tool inside an activity, not an item on a list.",
+   detail:"This is the move that lets product think freely instead of inside the two-apps, two-stakeholders system we inherited. It reframes form-filing as requirements-discovery: mapping an activity surfaces what's missing, like the lesson plan an observer needs.",
+   conn:["activity","persona","tools"]},
+
+  {id:"persona", area:"vocab", t:"Persona", s:"explore", ns:"The job-holder. Portable across orgs.",
+   mine:"The job-holder, the same everywhere. Teacher Supervisor. Defined by the activities it does, not by what one org calls it.",
+   detail:"One persona maps to several org-specific roles (QAO in Nigeria, ECDO and CSO in Kenya) with no link between them in the system today. Making persona first-class is the heart of the persona-config decision.",
+   conn:["role","activity","d-persona-config","d-persona-link"], links:[L.qRole]},
+  {id:"role", area:"vocab", t:"Role", s:"contested", flag:"fragile", ns:"The org-specific name + permission bundle.",
+   mine:"What a persona is called inside one org (QAO, ECDO, CSO), and the bundle of permissions attached. Today it's a generic entity that is basically just a name.",
+   detail:"The whole enterprise experience hangs off this one field. It's overloaded (it drives config, data scope, and the user-kind boundary) and unguarded: a regional manager can change it by hand and silently break a user.",
+   conn:["persona","scope","d-role-binding","d-persona-link"], links:[L.qRole]},
+  {id:"activity", area:"vocab", t:"Activity", s:"explore", ns:"A job a persona does. Shared across personas.",
+   mine:"A job someone does: classroom observation, coaching. It bundles the tools needed to do it. The same activity can belong to several personas.",
+   detail:"Because activities are shared across personas, they have to be reusable pieces that personas reference, not content copied into each persona. That's what makes the composition model a reference graph.",
+   conn:["task","tools","comp-ref","shared-act"]},
+  {id:"task", area:"vocab", t:"Task", s:"explore", ns:"A step inside an activity.",
+   mine:"A single step within an activity (observe the lesson, give feedback). The smaller unit; maps roughly to a feature.",
+   detail:"Holding task at feature-grain keeps the analogy clean: activity is the bundle (module-ish), task is the single capability (feature-ish).",
+   conn:["activity","feature"]},
+  {id:"tools", area:"vocab", t:"Tools", s:"settled", ns:"What a task needs. Forms + references.",
+   mine:"Everything a task needs to hand: forms to fill, plus reference tools like the lesson plan and context dashboards. A form is just one kind of tool.",
+   detail:"The lesson-plan insight lives here: mapping the observation activity revealed the observer needs the teacher's lesson plan, a tool the app doesn't currently surface. Tools can be borrowed across activities.",
+   conn:["asset","reads","shift"]},
+  {id:"four-q", area:"vocab", t:"The four questions", s:"settled", ns:"A read lens, not a layer.",
+   mine:"For any read: which data (the flow) / how much (none, aggregate, individual) / whose (only your linked schools) / any walls (directional limits). An analysis lens we hold up against the structure.",
+   detail:"Built during the form-submissions work. It's a frame for interrogating reads, not a system primitive, so it sits beside the model rather than inside it. Aggregate is the floor; individual is a scoped add-on.",
+   conn:["scope","reads","d-access-usage"], links:[L.qReads]},
+
+  {id:"comp-ref", area:"comp", t:"Composition by reference", s:"explore", ns:"Reference shared things, don't contain them.",
+   mine:"A persona references activities; an activity references tool-slots; the org binds assets into slots. Each shared thing lives once and everyone points at it, instead of being nested and duplicated.",
+   detail:"The key distinction: reference, not containment. If a persona contained its activities, a shared activity couldn't live in two personas without duplicating. References make sharing actually work.",
+   conn:["persona","activity","skeleton","asset-adr"], links:[L.adr]},
+  {id:"skeleton", area:"comp", t:"Skeleton + binding", s:"explore", ns:"Persona config = shape; org binds the assets.",
+   mine:"The persona config is the experience skeleton: the activities and the slots for the tools each needs. The org binds its own specific assets (its forms, its dashboards) into those slots. Skeleton shared, contents per-org.",
+   detail:"This is the cleaner cut than base-plus-override: structure and content are different kinds of thing on different layers, so they evolve independently. It maps directly onto the cross-org asset-sharing decision, one level up.",
+   conn:["persona","asset-adr","d-persona-config","shared-act"], links:[L.adr]},
+  {id:"shared-act", area:"comp", t:"Shared activities & coupling", s:"explore", ns:"Reuse buys no-duplication, costs coupling.",
+   mine:"Activities shared across personas means changing one changes it for everyone who references it. Sometimes that's what you want, sometimes not. The share-vs-fork-vs-override question reappears at every level.",
+   detail:"This is the fractal part: the same 'shared thing, small local difference' problem shows up at persona, activity, and tool level. It's exactly what the asset model's versioning already exists to handle.",
+   conn:["activity","skeleton","asset-adr"], links:[L.adr]},
+
+  {id:"scope", area:"scope", t:"What is scope?", s:"decision", flag:"open question", ns:"Which data a user can see. Not a real concept yet.",
+   mine:"Scope is which specific entities' data a user can see (which schools, which users). It isn't a real concept in the system. It's faked from role plus operational coverage, wired through fragile one-directional links. The real primitive (see the finding) is configurable hierarchies with roles anchored to nodes.",
+   detail:"Tracked as an open question in Notion (linked below). The foundational gap: several other questions (lists, multi-directional discoverability, form-submission reads) read as intuited solutions to this unnamed problem.",
+   conn:["lattice","scope-primitive-shape","role","cohorts","d-scope-primitive"], links:[L.qScope],
+   q:"Does the system need to represent scope (hierarchy and level) as a first-class concept, or is the current flat-entities-plus-links approach enough?"},
+  {id:"lattice", area:"scope", t:"Scope is a lattice", s:"explore", ns:"Two crossing hierarchies, not one tree.",
+   mine:"Scope isn't a single hierarchy. In EIDU's case two interweave: operational (school > zone > unit > state) and government/location (school > ward > local government > senatorial district > state). They meet only at schools and state.",
+   detail:"Roles pin at different levels of different trees. Any model that treats scope as one tree will break. The name Trellis is apt: a lattice of crossing supports, not a trunk. But two-crossing-trees is EIDU's instance, not the universal shape, see the configurable-hierarchies finding.",
+   conn:["scope","roles-nodes","scope-primitive-shape"]},
+  {id:"scope-primitive-shape", area:"scope", t:"The primitive is configurable hierarchies", s:"explore", flag:"finding", ns:"Not two crossing trees, but N hierarchies + anchored roles.",
+   mine:"The real primitive is: a configurable set of hierarchies, each owned by a stakeholder, with roles anchored to nodes and reaching the schools below. How many hierarchies, of what shape, and whether they cross is configuration, not architecture. EIDU's two-crossing-trees is one instance.",
+   detail:"Stress-tested against future customers: a government partner brings its own location tree; a non-EIDU customer might have just one hierarchy, or a different shape with no parallel operational structure. The model only survives if the shape is data. Verified: EIDU reuses the same operational hierarchy across its three deployments (Maru configured them). The government tree differs per government. Same shared-skeleton / per-instance shape as the persona-config question, one level down. Not yet logged in Notion.",
+   conn:["scope","lattice","d-stakeholder-org","d-scope-primitive"]},
+  {id:"roles-nodes", area:"scope", t:"Roles pinned at nodes", s:"settled", ns:"Each role sits at a node on a tree.",
+   mine:"Head Teacher at a school, QAO at a zone, EO at a unit, Head of Section at a local government, regional manager at a state, external partner at a zone. A role covers the schools reachable below its node.",
+   detail:"Head Teacher is the leaf case (one school), regional manager the root case (everything). Same shape across all: a role anchored to a node, resolved to its leaf schools. External partner is a third actor-kind (not EIDU, not government) sharing a node with EIDU roles.",
+   conn:["lattice","scope"]},
+  {id:"cohorts", area:"scope", t:"Cohorts: paths vs lists", s:"explore", ns:"Derivable vs hand-picked sets of schools.",
+   mine:"Derivable cohorts (region, programme) are paths the graph can resolve. Hand-picked ones (randomised RCT groups) can't be derived by any rule, so they need lists. Real selectors need to compose both with AND/OR.",
+   detail:"The form-field hack (scope as fields on the form entity type) is what we want to retire: it makes the entity type diverge per org and is invisible. The open question to Krste (engineering): can availability selectors compose paths and lists in one boolean rule.",
+   conn:["scope","form-avail"], links:[L.qLists]},
+  {id:"form-avail", area:"scope", t:"Form availability", s:"parked", flag:"waiting: Krste", ns:"Who can fill what, where. Entity-to-entity.",
+   mine:"Which forms appear for whom to fill. Entity-to-entity, resolvable from paths plus lists, mostly already have it. Distinct from reading submissions (which is event-data and may not be needed).",
+   detail:"Krste (engineering) split this into two capabilities: availability vs submission-reads. Waiting on his answer: can a single form's availability be a boolean formula over paths and lists. Live regardless of the reads question.",
+   conn:["cohorts","reads"], links:[L.qReads, L.qLists]},
+
+  {id:"config", area:"arch", t:"Config", s:"settled", ns:"Data, not code. An entity kind.",
+   mine:"Data (YAML), not code: feature flags, parameters. A first-class entity kind, discovered through permissions at sync time. It enables and parameterises features.",
+   detail:"Note the word collides with our 'persona config'. Whether the product config-container is the same thing as this architecture config is its own open question.",
+   conn:["feature","asset","d-persona-config","d-config-overload"]},
+  {id:"feature", area:"arch", t:"Feature", s:"settled", ns:"A named app capability / surface.",
+   mine:"A named capability or surface the app renders. An asset kind. Config decides whether it's on and with what parameters.",
+   detail:"Roughly the task-grain unit on the architecture side. Open contested point: does feature code ship in the bundle, or get delivered as a plugin (transcript and docs disagree).",
+   conn:["config","module","task","glossary"]},
+  {id:"module", area:"arch", t:"Module", s:"contested", flag:"least defined", ns:"Role-facing bundle of features + nav.",
+   mine:"A higher-level bundle of features and navigation that a role gets (Forms, Assessments, Insights). The least formally defined of the architecture terms.",
+   detail:"Activity maps onto this bundle-grain, but 'module' is Logan's term and may not survive Bernd's 'everything is a plugin' framing. Don't anchor the product model to it.",
+   conn:["feature","activity","d-module-survives","glossary"]},
+  {id:"plugin", area:"arch", t:"Plugin", s:"contested", flag:"disputed", ns:"Swappable code. Definition unsettled.",
+   mine:"Code plugged into the app. But what counts as one is actively argued: Bernd says any code, size-independent (features are plugins); the docs say a narrow swappable unit alongside config. Not resolved.",
+   detail:"This is the headline contested term. A shared glossary has been promised repeatedly and still isn't written. Your two-layer framing (product vocabulary vs architecture vocabulary) is what rescues this.",
+   conn:["feature","glossary"]},
+  {id:"asset", area:"arch", t:"Asset", s:"settled", ns:"Runtime + payload. Forms, dashboards, charts.",
+   mine:"A specialised entity = runtime (code) + payload (config/data). Features, dashboards, charts all follow this pattern. Forms are assets; dashboards and charts are assets that read datasets.",
+   detail:"Assets are the shareable, versioned building blocks. The whole persona-config idea rides on treating personas and activities as the same kind of shareable thing.",
+   conn:["dataset","asset-adr","tools"]},
+  {id:"entity", area:"arch", t:"Entity", s:"settled", ns:"Typed master data. Config is one kind.",
+   mine:"Typed master-data records: schools, users, forms. Config is one entity kind. Features need only a thin slice of entities (roughly learners + grades).",
+   detail:"The type-safety worry lives here: generic code doesn't know an org's entity types, so an edit can silently break things. Same shape as the role/scope fragility, one level down.",
+   conn:["scope","reads"]},
+  {id:"dataset", area:"arch", t:"Dashboards, charts, datasets", s:"settled", ns:"Assets that read datasets.",
+   mine:"Dashboards and charts are asset kinds that read datasets. This is where aggregate reads live, the 95% case operations actually needs.",
+   detail:"Confirms reads mostly don't need raw submissions: drilling down through a dataset to an individual data point is still the query layer, not a raw document.",
+   conn:["asset","reads","projection"]},
+  {id:"projection", area:"arch", t:"Projection", s:"settled", ns:"Current state rebuilt from event history.",
+   mine:"Reconstructing current state from the history of events (who's in a class now, from add/remove events). An engineering concept raised in the daily syncs.",
+   detail:"Likely where aggregate reads over usage data actually live. Connects to Krste's 'submission reads are event-data' point: a submission is an event, aggregates are projections over the event stream.",
+   conn:["dataset","reads"]},
+  {id:"asset-adr", area:"arch", t:"Cross-org asset-sharing (decided)", s:"settled", flag:"the lever", ns:"Share via versioned log, don't duplicate.",
+   mine:"An accepted architecture decision: a target org imports a local entity pointing to the same shared versioned log. No data duplicated, built specifically to avoid per-org divergence.",
+   detail:"This is your strongest lever. It's already decided, and it's the mechanism a persona config could reuse: shared skeleton + local handle. It defeats the 'that's the cross-org thing, it's later' brush-off, because it isn't the deferred org-less question (linked below), it's this settled one. Note the broader 'cross-org asset store' open question is still Later and is separate.",
+   conn:["skeleton","d-persona-config","shared-act"], links:[L.adr, L.xstore, L.orgless]},
+  {id:"glossary", area:"arch", t:"The glossary", s:"contested", flag:"pending", ns:"Config/feature/module/plugin, still unwritten.",
+   mine:"The shared definitions of the architecture terms. Promised repeatedly and still not written down. Logan called the confusion a knowledge parasite.",
+   detail:"Until it exists, the architecture layer is wet cement. Your contribution: keep product vocabulary separate from architecture vocabulary so they don't get forced into one list.",
+   conn:["plugin","module","feature"]},
+
+  {id:"d-persona-config", area:"decisions", t:"Author per-persona or per-role?", s:"decision", flag:"the big one", ns:"The decision that gets made by default in the spike.",
+   mine:"When we build a config, do we build it for the Teacher Supervisor persona, or separately for ECDO, CSO, QAO? Per-role is the default the spike will take unless we decide otherwise.",
+   detail:"The central decision to put to engineering. Framed as duplication/authoring (an open drawer), not cross-org linking (a closed one). The cross-org asset-sharing decision is the existing mechanism it could use. A this-spike fork, not a someday concern.",
+   conn:["persona","skeleton","asset-adr","config"], links:[L.qRole, L.adr],
+   q:"Do we author configs from a shared persona base, or hand-build per role? Author-from-base keeps the option open; per-role forecloses it."},
+  {id:"d-scope-primitive", area:"decisions", t:"Scope as a first-class primitive?", s:"decision", flag:"foundational", ns:"Make scope real, or keep faking it.",
+   mine:"Does scope (hierarchy, level, the lattice) need to be a real concept the system represents, or do we keep reconstructing it from flat entities and manual links?",
+   detail:"The foundational decision. Can't be fully specified until the org structures are mapped, but the direction needs flagging before the SDK assumes the flat approach.",
+   conn:["scope","lattice"], links:[L.qScope],
+   q:"First-class scope concept, or flat-entities-plus-links forever?"},
+  {id:"d-role-binding", area:"decisions", t:"Role + scope must agree", s:"parked", flag:"known fix", ns:"Role changed, scope forgotten, user breaks.",
+   mine:"Role and scope assignment must match, but nothing enforces it. Change one without the other and the user silently breaks. Known, present, and fixable with validation + UI.",
+   detail:"The parked half of the role/persona open question (linked below). Name it and move on; it's a guardrail, not the hard part. The hard part is the persona-config decision above.",
+   conn:["role","scope","d-persona-config"], links:[L.qRole]},
+  {id:"d-config-overload", area:"decisions", t:"Is 'config' one word for two things?", s:"explore", ns:"Product container vs architecture YAML.",
+   mine:"We use 'config' for the product container (what a persona can do) and engineering uses it for YAML data that enables features. Same word, possibly same thing, possibly overloaded.",
+   detail:"Word-collisions are where lock-in hides. Worth surfacing so the two senses don't quietly merge or quietly diverge unnoticed.",
+   conn:["config","d-persona-config"]},
+  {id:"d-persona-link", area:"decisions", t:"One persona, many roles, no link", s:"decision", ns:"Should persona be first-class so the roles connect?",
+   mine:"Teacher Supervisor is QAO / ECDO / CSO across deployments, and the system has no link between them. The equivalence lives only in our heads.",
+   detail:"Collides with the user-kind data-protection setup (which deliberately keeps kinds unlinkable). So making persona first-class has to respect that boundary. A real fork, not just a naming wish.",
+   conn:["persona","role"], links:[L.qRole]},
+  {id:"d-access-usage", area:"decisions", t:"Access control over usage data?", s:"explore", ns:"Does access control reach beyond entities?",
+   mine:"The four questions read data. Does access control cover only entities, or also usage data and submissions? One candidate is a fifth access right (read usage data) at the asset-kind level.",
+   detail:"Open seam. Matters for whether the reads model needs anything new, or rides the existing entity-permission layer plus projections. The fifth-access-right idea is Bernd's, not yet decided.",
+   conn:["four-q","reads"], links:[L.qReads]},
+  {id:"d-raw-submission", area:"decisions", t:"Does any case need raw submissions?", s:"parked", flag:"waiting: Joseph", ns:"The question that decides the reads model.",
+   mine:"Do we ever need to expose a raw form submission, or is drilling to an individual data point in the query layer always enough? Operations: ~95% no. The tail: assessments shown to a parent, substitution.",
+   detail:"The single most decisive open question for reads. Waiting on Joseph (does an assessment need the raw submission, or just a result?), then Nina (learning, from 3 July). If raw reads aren't needed anywhere, the whole gating problem dissolves.",
+   conn:["reads","reads-agg","form-subs"], links:[L.qReads]},
+  {id:"d-module-survives", area:"decisions", t:"Does 'module' survive?", s:"contested", ns:"Is module a real grain, or absorbed into plugin?",
+   mine:"Activity maps onto module-as-bundle, but module is the least-defined term and may dissolve into Bernd's plugin framing. Don't bet the product model on the word.",
+   detail:"Resolved by the glossary. Until then, say the mechanism (a config enabling a bundle of features for a role) rather than the contested noun.",
+   conn:["module","glossary"]},
+
+  {id:"d-visibility-axis", area:"decisions", t:"Visibility is separate from reach", s:"decision", flag:"finding", ns:"Who sees whose activity is not the same as which schools you cover.",
+   mine:"Two roles can sit at the same node and cover the same schools (same reach) but see completely different things. A QAO at a zone can drill down to an individual Head Teacher's data; a Fellow at the same zone cannot. So visibility is a second axis on top of scope, not a property of position on the tree.",
+   detail:"All reads are aggregated (Ops confirmed no raw submissions), so the visibility axis is really about drill-depth: how far down, and into whose activity, a role can resolve the data. This is the structural finding the scope lattice deliberately does not draw. Not yet logged in Notion; log after the Ops conversation.",
+   conn:["scope","roles-nodes","d-peer-visibility","d-stakeholder-org","reads"]},
+  {id:"d-stakeholder-org", area:"decisions", t:"Stakeholder-orgs as a primitive", s:"explore", flag:"proposal", ns:"One field-staff kind; typed orgs that declare their roles.",
+   mine:"A candidate redesign: one user-kind for field staff, where each user belongs to a stakeholder-org (EIDU, a government body, an external partner). The stakeholder-org is a typed entity that declares which roles it may contain, and visibility is partly engrained at the org level (EIDU sees all; a government org sees its own; a partner org sees its own).",
+   detail:"This turns the user-kind wall (currently a configuration hack) into real structure, and dissolves the Fellow mis-kinding. Open part: the relationship to today's top-level organization differs by stakeholder type. EIDU's setup should be reusable across deployments (Kenya primary, pre-primary, Nigeria); a government's is deployment-specific; a partner's might cut across deployments. This is a candidate answer to the existing 'org-bound vs org-less' open question. Not yet logged; needs an Ops + Bernd/Krste discussion first.",
+   conn:["role","d-fellow-kind","d-visibility-axis","d-persona-link"]},
+  {id:"d-fellow-kind", area:"decisions", t:"Fellows are mis-kinded", s:"explore", flag:"correction", ns:"Fellows sit under Government staff; probably wrong.",
+   mine:"Fellows were created as a role inside Government staff for simplicity. That is likely a misrepresentation: a Fellow is an external partner, not government. With more time the cleaner model would be an External Partners user-kind (or stakeholder-org) with Fellow as a role inside it.",
+   detail:"Matters because the boundary that should wall Fellows off from government and EIDU activity is the thing currently mis-set. Resolved naturally if stakeholder-orgs become real. Not yet logged in Notion.",
+   conn:["role","d-stakeholder-org","d-visibility-axis"]},
+  {id:"d-peer-visibility", area:"decisions", t:"Do role-peers see each other?", s:"decision", flag:"open", ns:"When two people share a role, can they see each other's data?",
+   mine:"Genuinely open, sourced to Ops and not fully settled. Two EOs per unit coach each other and share responsibility, so they should see each other's submissions. Two QAOs in a zone is usually moot (typically one per zone). A Head Teacher role shared by an HT and a senior teacher: probably should see each other, not sure. A QAO covering for another during substitution: maybe should see the covered person's data, not sure.",
+   detail:"This is the intra-org, role-to-role layer of visibility that the stakeholder-org model does not resolve. The substitution case is really a temporary-assignment question, so it may belong to the scope/assignment layer, not visibility. A list of unknowns to take to Ops, not a settled rule. Not yet logged in Notion.",
+   conn:["d-visibility-axis","roles-nodes","scope"]},
+  {id:"d-teacher-kind", area:"decisions", t:"Where do Teachers and Head Teachers sit?", s:"explore", flag:"open", ns:"A teacher kind, and whether Head Teachers straddle.",
+   mine:"Learners and Teachers behave differently from field staff (Learners have encrypted data; Teachers differ in ways not yet understood). If field staff become one kind, a teacher kind sits beside it. But a Head Teacher both teaches in a school and acts as field-staff for the EIDU program, so it may straddle the clean kinds.",
+   detail:"The straddle is the same thing that broke 'kind' in the first place. Flagged, not resolved. Needs the data-model conversation. Not yet logged in Notion.",
+   conn:["role","d-stakeholder-org","entity"]},
+
+  {id:"form-subs", area:"origin", t:"Form submissions", s:"parked", ns:"Where this all started.",
+   mine:"The origin thread. A permissions problem in Katsina: you can't show only the forms a user fills if they also need to read others' submissions. Following it down led to everything else here.",
+   detail:"Mostly parked now, waiting on Joseph, Nina, and Clara's government research. The reads model is nearly closed pending the raw-submission answer.",
+   conn:["gating","reads","d-raw-submission"], links:[L.qReads, L.workmod]},
+  {id:"gating", area:"origin", t:"The gating chain", s:"settled", ns:"read-form gates submit + read-submissions.",
+   mine:"CRUD on forms is already four separate permissions. The real coupling: submit-form and read-submissions are both gated by read-form, so you can't grant submission-read without exposing the form.",
+   detail:"Breaking that gating was the original Katsina goal. But if raw reads aren't needed, there's nothing to decouple and the gating problem dissolves.",
+   conn:["form-subs","reads","d-raw-submission"], links:[L.qReads]},
+  {id:"reads-agg", area:"origin", t:"~95% aggregate", s:"settled", ns:"Almost no one needs raw submissions.",
+   mine:"Operations needs aggregated/dashboard data, not raw submissions. The individual tail is narrow: an assessment shown to a parent, and substitution coverage.",
+   detail:"From the operations workshops (Charlotte, and Sasha). Shrank the whole problem: the elaborate per-role submission-read permission may be unnecessary; the system just needs to surface a raw submission to a scoped reader in the narrow exception.",
+   conn:["reads","d-raw-submission"], links:[L.qReads]},
+  {id:"reads", area:"origin", t:"Reads (access to data)", s:"explore", ns:"Aggregate / individual point / raw submission.",
+   mine:"Three levels: aggregate (the floor), individual data point (still the query layer), raw submission (the actual filled form). Only the third needs a submission-reading feature, and maybe nothing needs it.",
+   detail:"The four-questions lens reads here. Most reads collapse to drilling aggregated data via dashboards and projections; raw reads are the narrow, pending-Joseph case.",
+   conn:["four-q","gating","dataset","d-raw-submission"], links:[L.qReads]}
+];
+
+var byId={}, byArea={};
+NODES.forEach(function(n){ byId[n.id]=n; (byArea[n.area]=byArea[n.area]||[]).push(n); });
+var areaById={}; AREAS.forEach(function(a){areaById[a.id]=a;});
+var activeFilters={}, currentPage="overview";
+var menu=document.getElementById('menu'), col=document.getElementById('col'),
+    panel=document.getElementById('panel'), panelInner=document.getElementById('panelInner');
+
+function buildMenu(){
+  var items=[{id:"overview",name:"Overview",cls:"overview"}].concat(AREAS.map(function(a){return {id:a.id,name:a.name};}));
+  menu.innerHTML='';
+  items.forEach(function(it){
+    var a=document.createElement('a');
+    a.className=(it.cls||'')+(it.id===currentPage?' active':'');
+    a.setAttribute('data-page',it.id);
+    var hasDec = it.id!=='overview' && (byArea[it.id]||[]).some(function(n){return n.s==='decision';});
+    a.innerHTML='<span class="t">'+it.name+'</span>'+(hasDec?'<span class="dec" title="contains a live decision"></span>':'');
+    a.addEventListener('click',function(){ navigate(it.id); });
+    menu.appendChild(a);
+    if(it.id==="overview"){ var s=document.createElement('div'); s.className='sep'; menu.appendChild(s); }
+  });
+}
+function nodeCard(n){
+  return '<button class="node" data-s="'+n.s+'" data-id="'+n.id+'">'+
+    (n.flag?'<span class="flag">'+n.flag+'</span>':'')+
+    '<div class="nt">'+n.t+'</div><div class="ns">'+n.ns+'</div></button>';
+}
+function renderOverview(){
+  var html='<div class="page-head"><h2>Overview</h2><div class="ps">The whole field in one glance. Your cheatsheet. Each section also has its own page in the menu.</div></div>';
+  AREAS.forEach(function(a){
+    html+='<section class="area"><h3>'+a.name+'</h3><div class="sub">'+a.sub+'</div><div class="nodes">';
+    (byArea[a.id]||[]).forEach(function(n){ html+=nodeCard(n); });
+    html+='</div></section>';
+  });
+  col.innerHTML=html;
+}
+function renderSection(id){
+  var a=areaById[id];
+  var html='<div class="page-head"><h2>'+a.name+'</h2><div class="ps">'+a.sub+'</div></div><div class="nodes">';
+  (byArea[id]||[]).forEach(function(n){ html+=nodeCard(n); });
+  html+='</div>';
+  col.innerHTML=html;
+}
+
+// ---- bespoke Scope page: the reach lattice ----
+// roleId -> ordered chain of node-ids from the role's node DOWN to school (what it reaches)
+var REACH = {
+  rm:    ["state","unit","sd","zone","lg","ward","school"], // root: everything below, both trees
+  eo:    ["unit","zone","school"],          // operational, from unit down
+  qao:   ["zone","school"],                 // operational, from zone down
+  fellow:["zone","school"],                 // same reach as QAO; visibility differs (see questions)
+  hos:   ["lg","ward","school"],            // government, from local government down
+  ht:    ["school"]                          // leaf: one school
+};
+function renderScope(){
+  var a=areaById["scope"];
+  var html='<div class="page-head"><h2>'+a.name+'</h2><div class="ps">'+a.sub+'</div></div>';
+  // the primitive
+  html+='<div class="primitive">'+
+        '<div class="prim-h">The primitive</div>'+
+        '<p>Scope is <b>a configurable set of hierarchies, each owned by a stakeholder, with roles anchored to nodes and reaching the schools below.</b> '+
+        'How many hierarchies, of what shape, and whether they cross is <b>configuration, not architecture</b>. '+
+        'EIDU happens to have two that cross (below). A future customer might have one (location only), or a different shape entirely.</p>'+
+        '<div class="prim-cases">'+
+        '<span class="pc">EIDU: two crossing trees (operational \u00d7 government)</span>'+
+        '<span class="pc">A government partner: its own location tree</span>'+
+        '<span class="pc">A future non-EIDU customer: maybe one tree, maybe a different one</span>'+
+        '</div></div>';
+  // the lattice (one instance)
+  html+='<div class="lattice">';
+  html+='<div class="lat-cap"><b>EIDU\u2019s instance</b> of that primitive: two hierarchies that cross, meeting only at <b>school</b> (bottom) and <b>state</b> (top). '+
+        'The <b>operational</b> tree is EIDU\u2019s, reused across its three deployments (verified). Each <b>government</b> tree belongs to that government and differs per deployment. '+
+        'Click a role to light the schools its scope <b>reaches</b>. Schematic: one representative spine, real trees branch many ways.</div>';
+  html+=latticeSVG();
+  html+='<div class="lat-legendrow">'+
+        '<span class="rl" data-role="ht">Head Teacher</span>'+
+        '<span class="rl" data-role="qao">QAO</span>'+
+        '<span class="rl" data-role="fellow">Fellow</span>'+
+        '<span class="rl" data-role="eo">EO</span>'+
+        '<span class="rl" data-role="hos">Head of Section</span>'+
+        '<span class="rl" data-role="rm">Regional Manager</span>'+
+        '</div>';
+  html+='<div class="reach-note" id="reachNote">Reach = the schools below a role\u2019s node. A leaf role (Head Teacher) reaches one school; the root role (Regional Manager) reaches everything.</div>';
+  html+='</div>';
+
+  // the scope concept cards
+  html+='<div class="sub-h">The pieces</div><div class="nodes">';
+  (byArea["scope"]||[]).forEach(function(n){ html+=nodeCard(n); });
+  html+='</div>';
+
+  // what this doesn't show
+  html+='<div class="doesnt"><div class="doesnt-h">What this lattice deliberately does not show</div>'+
+        '<p>The lattice shows <b>reach</b> (which schools). It does not show <b>visibility</b> (who can see whose activity, and how deep) or the user-kind / stakeholder-org model underneath it. Those are open, live in the Live decisions page, and are sourced partly to in-progress Ops conversations. Click to read them.</p>'+
+        '<div class="conns" id="doesntRefs">';
+  ["d-visibility-axis","d-stakeholder-org","d-fellow-kind","d-peer-visibility","d-teacher-kind"].forEach(function(idr){
+    var t=byId[idr]; if(t) html+='<button data-go="'+idr+'">'+t.t+'</button>';
+  });
+  html+='</div></div>';
+
+  col.innerHTML=html;
+
+  // wire role lighting
+  col.querySelectorAll('.rl').forEach(function(el){
+    el.addEventListener('click',function(){ lightReach(el.getAttribute('data-role')); 
+      col.querySelectorAll('.rl').forEach(function(x){x.classList.remove('on');});
+      if(el.getAttribute('data-role')) el.classList.add('on');
+    });
+  });
+  // wire the "what this doesn't show" references -> open in panel, no page jump
+  col.querySelectorAll('#doesntRefs [data-go]').forEach(function(b){
+    b.addEventListener('click',function(){ select(b.getAttribute('data-go')); });
+  });
+}
+function latticeSVG(){
+  // taller viewBox so the bottom (school) node and its role label have room.
+  var P={
+    state:[380,46], school:[380,430],
+    unit:[165,165], zone:[165,300],            // operational (left)
+    sd:[595,135], lg:[595,250], ward:[595,365]  // government (right)
+  };
+  var labels={state:"State",school:"School",unit:"Unit",zone:"Zone",sd:"Senatorial district",lg:"Local government",ward:"Ward"};
+  var roleAt={state:"Regional Manager",unit:"EO",zone:"QAO + Fellow",school:"Head Teacher",lg:"Head of Section"};
+  var edges=[["state","unit"],["unit","zone"],["zone","school"],["state","sd"],["sd","lg"],["lg","ward"],["ward","school"]];
+  var s='<svg viewBox="0 0 760 480" class="latsvg" xmlns="http://www.w3.org/2000/svg">';
+  edges.forEach(function(e){
+    var f=P[e[0]],t=P[e[1]];
+    s+='<line class="edge" data-a="'+e[0]+'" data-b="'+e[1]+'" x1="'+f[0]+'" y1="'+f[1]+'" x2="'+t[0]+'" y2="'+t[1]+'"/>';
+  });
+  s+='<text class="col-cap" x="150" y="26" text-anchor="middle">operational</text>';
+  s+='<text class="col-cap" x="610" y="26" text-anchor="middle">government / location</text>';
+  Object.keys(P).forEach(function(k){
+    var p=P[k];
+    s+='<g class="lnode" data-node="'+k+'"><circle cx="'+p[0]+'" cy="'+p[1]+'" r="9"/>';
+    // placement: state above; school below; left column to the left; right column to the right
+    var anchor, lx, ly, rdy;
+    if(k==="state"){ anchor="middle"; lx=p[0]; ly=p[1]-18; rdy=-34; }
+    else if(k==="school"){ anchor="middle"; lx=p[0]; ly=p[1]+26; rdy=18; }
+    else if(p[0]<380){ anchor="end"; lx=p[0]-16; ly=p[1]+1; rdy=15; }
+    else { anchor="start"; lx=p[0]+16; ly=p[1]+1; rdy=15; }
+    s+='<text class="lnlbl" x="'+lx+'" y="'+ly+'" text-anchor="'+anchor+'">'+labels[k]+'</text>';
+    if(roleAt[k]) s+='<text class="lnrole" x="'+lx+'" y="'+(ly+rdy)+'" text-anchor="'+anchor+'">'+roleAt[k]+'</text>';
+    s+='</g>';
+  });
+  s+='</svg>';
+  return s;
+}
+function lightReach(role){
+  var chain = REACH[role]||[];
+  var set={}; chain.forEach(function(n){set[n]=1;});
+  col.querySelectorAll('.lnode').forEach(function(g){ g.classList.toggle('lit', !!set[g.getAttribute('data-node')]); });
+  col.querySelectorAll('.edge').forEach(function(ed){
+    ed.classList.toggle('lit', !!set[ed.getAttribute('data-a')] && !!set[ed.getAttribute('data-b')]);
+  });
+  var note=document.getElementById('reachNote');
+  if(note){
+    var msg={
+      ht:"Head Teacher sits at a single school: reaches one school. The leaf case.",
+      qao:"QAO sits at a zone: reaches every school in that zone.",
+      fellow:"Fellow sits at a zone too, so it reaches the same schools as the QAO. What it can SEE there is different, and that is a separate question (below).",
+      eo:"EO sits at a unit (above zones): reaches every school in the unit. EOs manage QAOs.",
+      hos:"Head of Section sits at a local government on the government tree: reaches every school below it.",
+      rm:"Regional Manager sits at the state: reaches everything, both trees. The root case.",
+      "":"Reach = the schools below a role\u2019s node. A leaf role (Head Teacher) reaches one school; the root role (Regional Manager) reaches everything."
+    };
+    note.textContent = msg[role]!==undefined?msg[role]:msg[""];
+  }
+}
+// ---- bespoke Vocabulary page: containment ladder ----
+function renderVocab(){
+  var a=areaById["vocab"];
+  var html='<div class="page-head"><h2>'+a.name+'</h2><div class="ps">'+a.sub+'</div></div>';
+  html+='<div class="ladder-wrap">';
+  html+='<div class="lad-cap">Each level <b>contains</b> the next. A persona is made of activities; an activity of tasks; a task needs tools. '+
+        'Click a level to see what it holds and what holds it. The <b>four questions</b> sit to the side: a lens for reads, not a level in the ladder.</div>';
+  html+='<div class="ladder">';
+  // the nested ladder
+  html+=ladderLevel("persona","Persona","the job-holder","Teacher Supervisor",0);
+  html+=ladderLevel("activity","Activity","a job it does","classroom observation, coaching",1);
+  html+=ladderLevel("task","Task","a step in the job","observe the lesson, give feedback",2);
+  html+=ladderLevel("tools","Tools","what the step needs","forms + references like the lesson plan",3);
+  html+='</div>';
+  // the lens, set apart
+  html+='<div class="lens"><div class="lens-tag">a lens, not a level</div>'+
+        '<button class="lens-card" data-id="four-q"><div class="nt">The four questions</div>'+
+        '<div class="ns">which data / how much / whose / any walls. Held up against any read, beside the ladder.</div></button></div>';
+  html+='<div class="lad-note">Tools can be <b>borrowed across activities</b> (the lesson plan serves both lesson observation and teach-a-class), which is the first hint that the real structure is composition by reference, not strict containment. See the composition model.</div>';
+  html+='</div>';
+
+  // concept cards
+  html+='<div class="sub-h">The pieces</div><div class="nodes">';
+  (byArea["vocab"]||[]).forEach(function(n){ html+=nodeCard(n); });
+  html+='</div>';
+
+  col.innerHTML=html;
+
+  // wire ladder levels + lens -> open panel (same-page, no jump)
+  col.querySelectorAll('.lad-row').forEach(function(el){
+    el.addEventListener('click',function(){
+      var id=el.getAttribute('data-id');
+      select(id);
+      // highlight this level + its neighbours (contains / contained-by) in place
+      var order=["persona","activity","task","tools"];
+      var i=order.indexOf(id);
+      col.querySelectorAll('.lad-row').forEach(function(r){
+        r.classList.remove('on','near');
+        var j=order.indexOf(r.getAttribute('data-id'));
+        if(j===i) r.classList.add('on');
+        else if(j===i-1||j===i+1) r.classList.add('near');
+      });
+    });
+  });
+  col.querySelector('.lens-card').addEventListener('click',function(){ select('four-q'); });
+}
+function ladderLevel(id,title,role,eg,depth){
+  return '<div class="lad-row" data-id="'+id+'" style="margin-left:'+(depth*34)+'px">'+
+    '<div class="lad-rail"></div>'+
+    '<div class="lad-body"><div class="lad-title">'+title+'</div>'+
+    '<div class="lad-role">'+role+'</div>'+
+    '<div class="lad-eg">'+eg+'</div></div>'+
+    (depth<3?'<div class="lad-down">contains \u2193</div>':'')+
+    '</div>';
+}
+// ---- bespoke Composition page: reference graph ----
+function renderComp(){
+  var a=areaById["comp"];
+  var html='<div class="page-head"><h2>'+a.name+'</h2><div class="ps">'+a.sub+'</div></div>';
+  html+='<div class="graph-wrap">';
+  html+='<div class="gr-cap">The ladder says "contains." The truth is <b>references</b>. A persona points at shared activities; an activity points at tool-slots; an org binds a real asset into each slot. '+
+        'Nothing is copied. Click a node to light what it points to and what points at it.</div>';
+  html+=compSVG();
+  html+='<div class="gr-key"><span class="gk"><i class="kref"></i> references (points at)</span> '+
+        '<span class="gk"><i class="kbind"></i> binds (org supplies the asset)</span> '+
+        '<span class="gk illus">illustrative placeholder, real activity map pending (Charlotte workshop)</span></div>';
+  html+='<div class="gr-note" id="grNote">Sharing appears at two levels. <b>Activity level:</b> coaching is shared by Teacher Supervisor and Head Teacher; attendance by Head Teacher and Teacher. <b>Tool level:</b> the lesson plan is one slot referenced by both lesson observation (the supervisor follows along) and teach a class (the teacher delivers from it) \u2014 one tool, two activities, two personas. The same tool plays a different role in each (the teacher uses it, the supervisor reads it), which is why a slot can carry intent, not just a pointer. Nothing is copied anywhere; the cross-org asset-sharing decision handles every level. This is one example; the pattern generalises to any shared tool.</div>';
+  html+='</div>';
+
+  // concept cards
+  html+='<div class="sub-h">The pieces</div><div class="nodes">';
+  (byArea["comp"]||[]).forEach(function(n){ html+=nodeCard(n); });
+  html+='</div>';
+
+  col.innerHTML=html;
+
+  // wire graph node clicks: highlight neighbours in place + open matching concept in panel
+  var nodeToConcept={persona1:"persona",persona2:"persona",persona3:"persona",
+                     act1:"activity",act2:"activity",act3:"activity",act4:"activity",
+                     slot1:"skeleton",slot2:"skeleton",slot3:"skeleton",slot4:"skeleton",
+                     assetA:"asset",assetB:"asset",assetC:"asset",assetD:"asset"};
+  col.querySelectorAll('.gnode').forEach(function(g){
+    g.addEventListener('click',function(){
+      var id=g.getAttribute('data-g');
+      lightGraph(id);
+      var c=nodeToConcept[id]; if(c) select(c);
+    });
+  });
+}
+// adjacency for the reference graph
+var GADJ={
+  persona1:["act1","act2"],          // Teacher Supervisor: lesson observation, coaching
+  persona2:["act2","act3"],          // Head Teacher: coaching, attendance check
+  persona3:["act4","act3"],          // Teacher: teach a class, attendance check
+  act1:["slot1","slot4"],            // lesson observation: its own form + the shared lesson plan
+  act2:["slot2"], act3:["slot3"], act4:["slot4"],   // teach a class: the shared lesson plan
+  slot1:["assetA"], slot2:["assetB"], slot3:["assetC"], slot4:["assetD"]
+};
+function gNeighbours(id){
+  var set={}; set[id]=1;
+  (function down(n){ (GADJ[n]||[]).forEach(function(m){ if(!set[m]){set[m]=1; down(m);} }); })(id);
+  Object.keys(GADJ).forEach(function(p){ if((GADJ[p]||[]).indexOf(id)>-1){ set[p]=1; } });
+  return set;
+}
+function lightGraph(id){
+  var set=gNeighbours(id);
+  col.querySelectorAll('.gnode').forEach(function(g){ g.classList.toggle('lit', !!set[g.getAttribute('data-g')]); g.classList.toggle('sel', g.getAttribute('data-g')===id); });
+  col.querySelectorAll('.gedge').forEach(function(e){
+    e.classList.toggle('lit', !!set[e.getAttribute('data-from')] && !!set[e.getAttribute('data-to')]);
+  });
+}
+function compSVG(){
+  // four columns: personas | activities | tool-slots | assets. Wider canvas so asset labels don't clip.
+  var P={
+    persona1:[40,70], persona2:[40,200], persona3:[40,330],
+    act1:[300,40], act2:[300,150], act3:[300,260], act4:[300,360],
+    slot1:[560,40], slot2:[560,150], slot3:[560,260], slot4:[560,360],
+    assetA:[820,40], assetB:[820,150], assetC:[820,260], assetD:[820,360]
+  };
+  var label={
+    persona1:"Teacher Supervisor", persona2:"Head Teacher", persona3:"Teacher",
+    act1:"Lesson observation", act2:"Coaching", act3:"Attendance check", act4:"Teach a class",
+    slot1:"lesson obs. form", slot2:"coaching form", slot3:"attendance form", slot4:"lesson plan",
+    assetA:"Nigeria lesson obs. form", assetB:"Kenya coaching form", assetC:"shared attendance form", assetD:"org lesson plan"
+  };
+  var kind={persona1:"p",persona2:"p",persona3:"p",act1:"a",act2:"a",act3:"a",act4:"a",slot1:"s",slot2:"s",slot3:"s",slot4:"s",assetA:"x",assetB:"x",assetC:"x",assetD:"x"};
+  // in-degree: a node referenced by more than one source is "shared"
+  var indeg={};
+  Object.keys(GADJ).forEach(function(f){ GADJ[f].forEach(function(t){ indeg[t]=(indeg[t]||0)+1; }); });
+  var edges=[];
+  Object.keys(GADJ).forEach(function(f){ GADJ[f].forEach(function(t){ edges.push([f,t]); }); });
+  var W=1000,H=410, NW=150, NH=30;
+  var s='<svg viewBox="0 0 '+W+' '+H+'" class="gsvg" xmlns="http://www.w3.org/2000/svg">';
+  s+='<text class="gcol" x="40" y="14">personas</text>';
+  s+='<text class="gcol" x="300" y="14">activities (shared)</text>';
+  s+='<text class="gcol" x="560" y="14">tool-slots</text>';
+  s+='<text class="gcol" x="820" y="14">assets (org binds)</text>';
+  edges.forEach(function(e){
+    var f=P[e[0]],t=P[e[1]];
+    var bind = (kind[e[1]]==="x");
+    s+='<line class="gedge '+(bind?"bind":"ref")+'" data-from="'+e[0]+'" data-to="'+e[1]+'" x1="'+(f[0]+NW)+'" y1="'+(f[1]+NH/2)+'" x2="'+(t[0]-3)+'" y2="'+(t[1]+NH/2)+'"/>';
+  });
+  Object.keys(P).forEach(function(k){
+    var p=P[k];
+    var sh = (indeg[k]>1) ? ' shared' : '';
+    s+='<g class="gnode k-'+kind[k]+sh+'" data-g="'+k+'">'+
+       '<rect x="'+p[0]+'" y="'+p[1]+'" rx="8" ry="8" width="'+NW+'" height="'+NH+'"/>'+
+       '<text class="glbl" x="'+(p[0]+NW/2)+'" y="'+(p[1]+NH/2+4)+'" text-anchor="middle">'+label[k]+'</text>'+
+       (sh?'<text class="gshare" x="'+(p[0]+NW/2)+'" y="'+(p[1]-5)+'" text-anchor="middle">shared</text>':'')+
+       '</g>';
+  });
+  s+='</svg>';
+  return s;
+}
+function bindStackLike(sel){
+  col.querySelectorAll(sel+' [data-id]').forEach(function(el){
+    el.addEventListener('click',function(){ select(el.getAttribute('data-id')); });
+  });
+}
+// ---- bespoke Architecture primitives page: layered stack ----
+function renderArch(){
+  var a=areaById["arch"];
+  var html='<div class="page-head"><h2>'+a.name+'</h2><div class="ps">'+a.sub+'</div></div>';
+  html+='<div class="stack-wrap">';
+  html+='<div class="stk-cap">Engineering\u2019s grain, top (what a role sees) to bottom (what\u2019s stored). The <b>contested</b> terms are flagged \u2014 those are exactly the ones the glossary still has to settle.</div>';
+  html+='<div class="stack">';
+  html+='<div class="stk-band lvl-role" data-id="module"><div class="stk-tier">role-facing</div>'+
+        '<div class="stk-term">Module <span class="stk-flag warn">contested \u00b7 least defined</span></div>'+
+        '<div class="stk-desc">The bundle of features and navigation a role gets (Forms, Assessments, Insights).</div></div>';
+  html+='<div class="stk-band lvl-cap"><div class="stk-tier">capability</div>'+
+        '<div class="stk-fork">'+
+        '<button class="stk-card" data-id="feature"><b>Feature</b><span>a named surface the app renders. settled.</span></button>'+
+        '<span class="stk-vs">delivered how?</span>'+
+        '<button class="stk-card warn" data-id="plugin"><b>Plugin</b><span>Bernd\u2019s framing. disputed.</span></button>'+
+        '</div></div>';
+  html+='<div class="stk-band lvl-data" data-id="asset"><div class="stk-tier">storable</div>'+
+        '<div class="stk-term">Asset <span class="stk-flag ok">settled \u00b7 the umbrella</span></div>'+
+        '<div class="stk-desc">One storable kind. Everything below is a kind of asset.</div>'+
+        '<div class="stk-chips">'+
+        '<button class="chip" data-id="config">Config</button>'+
+        '<button class="chip" data-id="entity">Entity</button>'+
+        '<button class="chip" data-id="dataset">Datasets / dashboards</button>'+
+        '<button class="chip" data-id="projection">Projection</button>'+
+        '</div></div>';
+  html+='</div>'; // .stack
+  html+='<div class="stk-rail">'+
+        '<button class="rail-card" data-id="asset-adr"><b>Cross-org asset-sharing</b> \u2014 the lever. Decided. The mechanism that lets any of these be shared across orgs without copying.</button>'+
+        '<button class="rail-card pend" data-id="glossary"><b>The glossary</b> \u2014 pending. Until it lands, every contested term above stays unsettled.</button>'+
+        '</div>';
+  html+='</div>'; // .stack-wrap
+
+  html+='<div class="sub-h">The pieces</div><div class="nodes">';
+  (byArea["arch"]||[]).forEach(function(n){ html+=nodeCard(n); });
+  html+='</div>';
+  col.innerHTML=html;
+  bindStackLike('.stack-wrap');
+}
+// ---- bespoke Live decisions page: ranked by weight ----
+function renderDecisions(){
+  var a=areaById["decisions"];
+  var tiers=[
+    {n:"1", th:"Spike-blocking", sub:"decide before the build freezes them by default", ids:["d-persona-config","d-scope-primitive","d-persona-link"]},
+    {n:"2", th:"Foundational, conversation-gated", sub:"mostly tonight\u2019s findings \u2014 need Ops or a Bernd/Krste talk before they\u2019re decidable", ids:["d-visibility-axis","d-stakeholder-org","d-fellow-kind","d-peer-visibility","d-teacher-kind","d-raw-submission"]},
+    {n:"3", th:"Mechanisms & known fixes", sub:"lower weight, or already understood", ids:["d-config-overload","d-access-usage","d-module-survives","d-role-binding"]}
+  ];
+  var html='<div class="page-head"><h2>'+a.name+'</h2><div class="ps">'+a.sub+'</div></div>';
+  html+='<div class="rank-note">Ranked by my read of <b>weight</b> = how foundational \u00d7 how time-pressured. This is a judgment call, not settled \u2014 tell me to re-rank or move anything.</div>';
+  tiers.forEach(function(t){
+    html+='<div class="tier"><div class="tier-h"><span class="tier-n">'+t.n+'</span><span class="th">'+t.th+'</span><span class="tier-sub">'+t.sub+'</span></div><div class="nodes">';
+    t.ids.forEach(function(id){ var n=byId[id]; if(n) html+=nodeCard(n); });
+    html+='</div></div>';
+  });
+  col.innerHTML=html;
+}
+// ---- bespoke Origin page: narrowing funnel ----
+function renderOrigin(){
+  var a=areaById["origin"];
+  var html='<div class="page-head"><h2>'+a.name+'</h2><div class="ps">'+a.sub+'</div></div>';
+  html+='<div class="funnel-wrap">';
+  html+='<div class="fn-cap">The problem <b>shrank as we investigated it</b>. It started broad and ended as a narrow tail waiting on people.</div>';
+  html+='<div class="funnel">'+
+        '<button class="fn-stage w1" data-id="form-subs"><b>Self-serve form data</b><span>the original ask: let ops read their own submissions</span></button>'+
+        '<button class="fn-stage w2" data-id="gating"><b>The gating chain</b><span>read-form gates submit and read-submissions \u2014 looked like a big permissions redesign</span></button>'+
+        '<button class="fn-stage w3" data-id="reads-agg"><b>~95% aggregate</b><span>the realisation that shrank it: almost no one needs raw rows</span></button>'+
+        '<button class="fn-stage w4" data-id="reads"><b>The reads tail</b><span>what\u2019s actually left \u2014 a narrow question, waiting on Joseph and the reads model</span></button>'+
+        '</div>';
+  html+='<div class="fn-note">Then the thread kept pulling: permissions \u2192 scope \u2192 the activities model. This narrow origin is what opened the whole map.</div>';
+  html+='</div>';
+  html+='<div class="sub-h">The pieces</div><div class="nodes">';
+  (byArea["origin"]||[]).forEach(function(n){ html+=nodeCard(n); });
+  html+='</div>';
+  col.innerHTML=html;
+  bindStackLike('.funnel-wrap');
+}
+function navigate(page){
+  currentPage=page;
+  document.querySelectorAll('#menu a').forEach(function(a){a.classList.toggle('active',a.getAttribute('data-page')===page);});
+  if(page==='overview') renderOverview();
+  else if(page==='scope') renderScope();
+  else if(page==='vocab') renderVocab();
+  else if(page==='comp') renderComp();
+  else if(page==='arch') renderArch();
+  else if(page==='decisions') renderDecisions();
+  else if(page==='origin') renderOrigin();
+  else renderSection(page);
+  bindNodes(); applyFilter(); col.parentElement.scrollTop=0;
+}
+function bindNodes(){
+  col.querySelectorAll('.node').forEach(function(el){ el.addEventListener('click',function(){ select(el.getAttribute('data-id')); }); });
+}
+function select(id){
+  var n=byId[id]; if(!n) return;
+  col.querySelectorAll('.node').forEach(function(el){ el.classList.toggle('sel', el.getAttribute('data-id')===id); });
+  var st=STATUS[n.s], area=areaById[n.area];
+  var html='<button class="close" aria-label="Close">&times;</button>';
+  html+='<div class="pstatus"><span class="sw" style="background:'+st.c+'"></span>'+st.label+'</div>';
+  html+='<h3>'+n.t+'</h3>';
+  html+='<div class="area-of">in <b data-go-area="'+n.area+'">'+area.name+'</b></div>';
+  html+='<div class="mine">'+n.mine+'</div>';
+  if(n.detail) html+='<div class="detail">'+n.detail+'</div>';
+  if(n.q) html+='<div class="q"><span class="ql">The open question</span>'+n.q+'</div>';
+  if(n.conn&&n.conn.length){
+    html+='<div class="blk-l">Connects to</div><div class="conns">';
+    n.conn.forEach(function(c){ var t=byId[c]; if(t) html+='<button data-go="'+c+'">'+t.t+'</button>'; });
+    html+='</div>';
+  }
+  if(n.links&&n.links.length){
+    html+='<div class="blk-l">References &mdash; open in Notion</div><div class="refs">';
+    n.links.forEach(function(x){ html+='<a href="'+x.u+'" target="_blank" rel="noopener">'+x.l+'<span class="arr">&#8599;</span></a>'; });
+    html+='</div>';
+  }
+  panelInner.innerHTML=html; panel.classList.add('open'); panelInner.scrollTop=0;
+  panelInner.querySelector('.close').addEventListener('click',closePanel);
+  var ga=panelInner.querySelector('[data-go-area]');
+  if(ga) ga.addEventListener('click',function(){ navigate(ga.getAttribute('data-go-area')); var el=col.querySelector('.node[data-id="'+id+'"]'); if(el){el.classList.add('sel');el.scrollIntoView({block:'center',behavior:'smooth'});} });
+  panelInner.querySelectorAll('[data-go]').forEach(function(b){
+    b.addEventListener('click',function(){
+      var gid=b.getAttribute('data-go'); select(gid);
+      var el=col.querySelector('.node[data-id="'+gid+'"]'); if(el) el.scrollIntoView({block:'center',behavior:'smooth'});
+    });
+  });
+}
+function closePanel(){ panel.classList.remove('open'); col.querySelectorAll('.node.sel').forEach(function(e){e.classList.remove('sel');}); }
+
+document.getElementById('legend').addEventListener('click',function(e){
+  var b=e.target.closest('.chipf'); if(!b) return;
+  var s=b.getAttribute('data-s'); activeFilters[s]=!activeFilters[s];
+  var any=Object.keys(activeFilters).some(function(k){return activeFilters[k];});
+  document.querySelectorAll('.chipf').forEach(function(c){ c.classList.toggle('off', any&&!activeFilters[c.getAttribute('data-s')]); });
+  applyFilter();
+});
+function applyFilter(){
+  var any=Object.keys(activeFilters).some(function(k){return activeFilters[k];});
+  col.querySelectorAll('.node').forEach(function(el){ el.classList.toggle('dim', any&&!activeFilters[el.getAttribute('data-s')]); });
+}
+document.addEventListener('keydown',function(e){ if(e.key==='Escape') closePanel(); });
+
+buildMenu(); navigate('overview');
+</script>
+</body>
+</html>
