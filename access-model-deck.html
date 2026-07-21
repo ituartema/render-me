@@ -1,0 +1,1185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Access model — working deck</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#ffffff; --bg2:#f8f7f5; --border:#e5e3dc; --border2:#d4d1c8;
+    --text:#1a1916; --text2:#5a5850; --text3:#9a9790; --accent:#8a6f3e;
+    --coral-fill:#faece7; --coral-stroke:#993c1d; --coral-title:#4a1b0c;
+    --amber:#ba7517; --amber-title:#633806;
+    --dark:#23272d;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%}
+  body{background:var(--bg);color:var(--text);font-family:'Syne',system-ui,sans-serif;line-height:1.6;display:flex;flex-direction:column;height:100vh;overflow:hidden}
+  .tabbar{flex:0 0 auto;background:var(--dark);border-bottom:1px solid #3a3f47;padding:10px 18px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .tabbar .brand{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.5px;text-transform:uppercase;color:#c7cdd4;margin-right:10px}
+  .tabbar button{background:#2f343b;border:1px solid #3f454e;color:#c7cdd4;border-radius:9px;padding:8px 13px;font-family:'Syne';font-size:13px;font-weight:600;cursor:pointer}
+  .tabbar button.on{background:var(--coral-stroke);border-color:var(--coral-stroke);color:#fff}
+  .stage{flex:1 1 auto;position:relative;overflow:hidden}
+  .stage iframe{position:absolute;inset:0;width:100%;height:100%;border:0;display:none}
+  .stage iframe.on{display:block}
+  .stage .pane{position:absolute;inset:0;overflow-y:auto;display:none}
+  .stage .pane.on{display:block}
+  /* overview */
+  .ov{max-width:960px;margin:0 auto;padding:40px 32px 80px}
+  .ov .label{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.5px;text-transform:uppercase;color:var(--accent)}
+  .ov h1{font-size:28px;font-weight:700;margin:6px 0 6px;letter-spacing:-.3px}
+  .ov .lede{font-size:15px;color:var(--text2);max-width:680px;margin-bottom:26px}
+  .ov h2{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:.5px;text-transform:uppercase;color:var(--accent);margin:26px 0 12px}
+  .steps{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .step{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:15px 16px;cursor:pointer;transition:border-color .12s}
+  .step:hover{border-color:var(--border2)}
+  .step .n{font-family:'DM Mono',monospace;font-size:11px;color:var(--accent);margin-bottom:5px}
+  .step b{font-size:15px;display:block;margin-bottom:3px}
+  .step span{font-size:12.5px;color:var(--text2)}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px 17px}
+  .card.settled{border-left:3px solid #4c9a64}
+  .card.open{border-left:3px solid var(--amber)}
+  .card h3{font-size:14px;font-weight:600;margin-bottom:9px}
+  .card .row{font-size:12.5px;color:var(--text2);line-height:1.55;margin-bottom:9px;padding-left:13px;text-indent:-13px}
+  .card .row:last-child{margin-bottom:0}
+  .card .row b{color:var(--text);font-weight:500}
+  .delta{background:#fdf6ee;border:1px solid #e8d4aa;border-radius:12px;padding:16px 17px;margin-bottom:12px}
+  .delta h3{font-size:14px;font-weight:600;color:var(--amber-title);margin-bottom:6px}
+  .delta p{font-size:13px;color:#7a5a28;line-height:1.6}
+  .delta p em{font-style:normal;font-weight:600;color:#5a3e18}
+  .foot{font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);margin-top:30px;border-top:1px solid var(--border);padding-top:14px}
+  @media(max-width:720px){.steps,.two{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+  <div class="tabbar">
+    <span class="brand">Trellis · access model</span>
+    <button class="on" onclick="showTab(0,this)">Overview</button>
+    <button onclick="showTab(1,this)">The model</button>
+    <button onclick="showTab(2,this)">Scope lattice</button>
+    <button onclick="showTab(3,this)">The grammar</button>
+    <button onclick="showTab(4,this)">Prototype</button>
+  </div>
+  <div class="stage">
+    <div class="pane on" data-i="0">
+      <div class="ov">
+        <div class="label">Working deck · for alignment</div>
+        <h1>How access works in the enterprise app</h1>
+        <div class="lede">A shared model for how <b>roles</b>, <b>activities</b> and <b>scope</b> compose — built from real field cases and engineering conversations. Some parts are settled; some are open questions still being worked. It's a model to think with, not a final spec.</div>
+
+        <h2>How to read it — four views</h2>
+        <div class="steps">
+          <div class="step" onclick="showTab(1,tabBtn(1))"><div class="n">01</div><b>The model</b><span>Three layers: role (what you switch into), activity (a reusable unit of capability), scope (which data).</span></div>
+          <div class="step" onclick="showTab(2,tabBtn(2))"><div class="n">02</div><b>Scope lattice</b><span>How scope actually nests — two crossing hierarchies. EIDU's is one configuration; partners may differ.</span></div>
+          <div class="step" onclick="showTab(3,tabBtn(3))"><div class="n">03</div><b>The grammar</b><span>Four actions in three tiers — and the "populate" middle a two-box model forgets.</span></div>
+          <div class="step" onclick="showTab(4,tabBtn(4))"><div class="n">04</div><b>Prototype</b><span>The model made real: a head teacher and a supervisor, in one shared shell.</span></div>
+        </div>
+
+        <h2>Where it stands</h2>
+        <div class="two">
+          <div class="card settled">
+            <h3>Common ground</h3>
+            <div class="row">— The <b>role</b> is the entry point to the experience; a config defines that experience.</div>
+            <div class="row">— Reusable, <b>hierarchical configs</b> (define once, reuse) are on the table.</div>
+            <div class="row">— <b>Edits are events</b> (engineering-confirmed): an edit appends an immutable event; the projection it also updates is a rebuildable cache.</div>
+            <div class="row">— Role-based access is the right frame; usage access can follow from user access.</div>
+          </div>
+          <div class="card open">
+            <h3>Still open</h3>
+            <div class="row">— <b>Assignment:</b> how a config attaches to a user — a permission or a semantic link.</div>
+            <div class="row">— <b>Form dropdowns</b> list all accessible entities regardless of the view selector — needs form selectors extended.</div>
+            <div class="row">— <b>Region</b> doesn't exist yet; grouping states into regions is gated on list-of-entities (being built).</div>
+            <div class="row">— A likely <b>third (partner) hierarchy</b>; and whether a Head of Section sees head teachers.</div>
+          </div>
+        </div>
+
+        <h2>Two open deltas this surfaced</h2>
+        <div class="delta">
+          <h3>1 · "Activity" vs "plugin" — likely the same thing</h3>
+          <p>Product's <em>activity</em> (a reusable bundle for a job) and engineering's <em>plugin</em> (a configurable feature component) appear to be the same construct named from two sides. Treated here as one thing, pending final confirmation — a vocabulary convergence, not a conflict.</p>
+        </div>
+        <div class="delta">
+          <h3>2 · Does scope need to be its own primitive?</h3>
+          <p>This model treats <em>scope</em> as its own primitive, because today it's reconstructed fragilely from roles, coverage and links. An alternative view holds scope needs no separate primitive — role-based access rights inside each config could express the same thing. Both are on the table. The cleanest way to settle it: build a real config for the hardest case — the scope lattice — and see whether it stays clean.</p>
+        </div>
+
+        <div class="foot">Trellis Enterprise Platform · access model · Jul 2026 · working draft for discussion</div>
+      </div>
+    </div>
+    <iframe data-i="1" sandbox="allow-scripts" srcdoc="&lt;!DOCTYPE html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;head&gt;
+&lt;meta charset=&quot;UTF-8&quot;&gt;
+&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1.0&quot;&gt;
+&lt;title&gt;The access model — three layers&lt;/title&gt;
+&lt;link rel=&quot;preconnect&quot; href=&quot;https://fonts.googleapis.com&quot;&gt;
+&lt;link rel=&quot;preconnect&quot; href=&quot;https://fonts.gstatic.com&quot; crossorigin&gt;
+&lt;link href=&quot;https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600&amp;family=DM+Mono:wght@400;500&amp;display=swap&quot; rel=&quot;stylesheet&quot;&gt;
+&lt;style&gt;
+  :root{
+    --bg:#ffffff; --bg2:#f8f7f5; --bg3:#f1efe9;
+    --border:#e5e3dc; --border2:#d4d1c8;
+    --text:#1a1916; --text2:#5a5850; --text3:#9a9790;
+    --accent:#8a6f3e;
+    --blue-fill:#e6f1fb; --blue-stroke:#185fa5; --blue-title:#042c53; --blue-sub:#185fa5;
+    --teal-fill:#e1f5ee; --teal-stroke:#0f6e56; --teal-title:#085041; --teal-sub:#0f6e56;
+    --coral-fill:#faece7; --coral-stroke:#993c1d; --coral-title:#4a1b0c; --coral-sub:#993c1d;
+    --gray-fill:#f1efe8; --gray-stroke:#5f5e5a; --gray-title:#2c2c2a; --gray-sub:#5f5e5a;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--bg);color:var(--text);font-family:&#x27;Syne&#x27;,system-ui,sans-serif;line-height:1.6}
+  .page{max-width:1080px;margin:0 auto;padding:40px 32px 72px}
+  .label{font-family:&#x27;DM Mono&#x27;,monospace;font-size:10px;letter-spacing:.5px;text-transform:uppercase;color:var(--accent)}
+  header{display:flex;justify-content:space-between;align-items:flex-start;gap:24px;border-bottom:1px solid var(--border);padding-bottom:20px;margin-bottom:28px}
+  header h1{font-size:26px;font-weight:600;margin:6px 0 4px;letter-spacing:-.3px}
+  header .sub{font-size:14px;color:var(--text2)}
+  .meta{font-family:&#x27;DM Mono&#x27;,monospace;font-size:10.5px;color:var(--text2);text-align:right;line-height:1.9;white-space:nowrap}
+  .meta b{color:var(--text3);font-weight:400}
+  .columns{display:grid;grid-template-columns:1fr 360px;gap:20px;align-items:start}
+  .diagram-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:12px}
+  svg .th{font-family:&#x27;Syne&#x27;;font-weight:500;font-size:13px}
+  svg .ts{font-family:&#x27;Syne&#x27;;font-weight:400;font-size:11px}
+  .node{cursor:pointer}
+  .node rect{transition:stroke-width .12s,opacity .12s}
+  .node:hover rect{opacity:.86}
+  .node.active rect{stroke-width:2 !important}
+  .c-blue rect{fill:var(--blue-fill);stroke:var(--blue-stroke)} .c-blue .th{fill:var(--blue-title)} .c-blue .ts{fill:var(--blue-sub)}
+  .c-teal rect{fill:var(--teal-fill);stroke:var(--teal-stroke)} .c-teal .th{fill:var(--teal-title)} .c-teal .ts{fill:var(--teal-sub)}
+  .c-coral rect{fill:var(--coral-fill);stroke:var(--coral-stroke)} .c-coral .th{fill:var(--coral-title)} .c-coral .ts{fill:var(--coral-sub)}
+  .c-gray rect{fill:var(--gray-fill);stroke:var(--gray-stroke)} .c-gray .th{fill:var(--gray-title)} .c-gray .ts{fill:var(--gray-sub)}
+  .conn{stroke:#9a9790;stroke-width:1;fill:none}
+  .conn-dash{stroke:#b4b2a9;stroke-width:1;fill:none;stroke-dasharray:5 4}
+  .connlabel{font-family:&#x27;DM Mono&#x27;,monospace;font-size:9.5px;fill:var(--text3)}
+  /* panel */
+  #panel{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:18px;min-height:160px}
+  #panel .ph{display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--text3);font-size:13px;text-align:center;padding:26px 10px;gap:8px}
+  #panel .ptag{display:inline-block;font-family:&#x27;DM Mono&#x27;,monospace;font-size:10px;text-transform:uppercase;letter-spacing:.5px;padding:3px 9px;border-radius:20px;margin-bottom:10px}
+  .pt-blue{background:var(--blue-fill);color:var(--blue-title)}
+  .pt-teal{background:var(--teal-fill);color:var(--teal-title)}
+  .pt-coral{background:var(--coral-fill);color:var(--coral-title)}
+  .pt-gray{background:var(--gray-fill);color:var(--gray-title)}
+  #panel h3{font-size:16px;font-weight:600;margin-bottom:8px}
+  #panel p{font-size:13.5px;color:var(--text2);line-height:1.65}
+  .info-flag{margin-top:11px;padding:9px 13px;background:#fdf6ee;border:1px solid #e8d4aa;border-radius:6px;font-size:12px;color:#7a5a28;line-height:1.6}
+  .info-flag strong{color:#5a3e18}
+  .notes{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:16px;margin-top:16px}
+  .notes .nh{font-family:&#x27;DM Mono&#x27;,monospace;font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--accent);margin-bottom:11px}
+  .notes .item{font-size:12.5px;color:var(--text2);line-height:1.55;margin-bottom:11px;padding-left:14px;text-indent:-14px}
+  .notes .item:last-child{margin-bottom:0}
+  .notes .item b{color:var(--text);font-weight:500}
+  footer{display:flex;justify-content:space-between;font-family:&#x27;DM Mono&#x27;,monospace;font-size:10px;color:var(--text3);margin-top:28px;border-top:1px solid var(--border);padding-top:14px}
+  @media(max-width:780px){.columns{grid-template-columns:1fr}.diagram-wrap{position:static}}
+&lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;div class=&quot;page&quot;&gt;
+  &lt;header&gt;
+    &lt;div&gt;
+      &lt;div class=&quot;label&quot;&gt;Trellis Enterprise Platform · access model&lt;/div&gt;
+      &lt;h1&gt;The access model: three layers&lt;/h1&gt;
+      &lt;div class=&quot;sub&quot;&gt;Roles for navigation. Activities for capability. Scope via a path through the org structure.&lt;/div&gt;
+    &lt;/div&gt;
+    &lt;div class=&quot;meta&quot;&gt;&lt;b&gt;date&lt;/b&gt; Jul 2026&lt;br&gt;&lt;b&gt;status&lt;/b&gt; draft — for review&lt;br&gt;&lt;b&gt;model&lt;/b&gt; role · activity · scope&lt;/div&gt;
+  &lt;/header&gt;
+
+  &lt;div class=&quot;columns&quot;&gt;
+    &lt;div&gt;
+    &lt;div class=&quot;diagram-wrap&quot;&gt;
+      &lt;svg width=&quot;100%&quot; viewBox=&quot;0 0 640 512&quot; role=&quot;img&quot; xmlns=&quot;http://www.w3.org/2000/svg&quot;&gt;
+        &lt;title&gt;The access model in three layers&lt;/title&gt;
+        &lt;desc&gt;Role is made of activities; each activity in a role resolves a scope. Scope has two facets — additive access and per-config display — plus a deferred differential-scope case.&lt;/desc&gt;
+        &lt;defs&gt;&lt;marker id=&quot;arrow&quot; viewBox=&quot;0 0 10 10&quot; refX=&quot;8&quot; refY=&quot;5&quot; markerWidth=&quot;6&quot; markerHeight=&quot;6&quot; orient=&quot;auto-start-reverse&quot;&gt;&lt;path d=&quot;M2 1L8 5L2 9&quot; fill=&quot;none&quot; stroke=&quot;context-stroke&quot; stroke-width=&quot;1.5&quot; stroke-linecap=&quot;round&quot; stroke-linejoin=&quot;round&quot;/&gt;&lt;/marker&gt;&lt;/defs&gt;
+
+        &lt;g class=&quot;node c-blue&quot; onclick=&quot;showDetail(&#x27;role&#x27;,this)&quot;&gt;
+          &lt;rect x=&quot;80&quot; y=&quot;30&quot; width=&quot;480&quot; height=&quot;64&quot; rx=&quot;12&quot; stroke-width=&quot;0.75&quot;/&gt;
+          &lt;text class=&quot;th&quot; x=&quot;320&quot; y=&quot;56&quot; text-anchor=&quot;middle&quot; dominant-baseline=&quot;central&quot;&gt;Role&lt;/text&gt;
+          &lt;text class=&quot;ts&quot; x=&quot;320&quot; y=&quot;76&quot; text-anchor=&quot;middle&quot; dominant-baseline=&quot;central&quot;&gt;what you switch into&lt;/text&gt;
+        &lt;/g&gt;
+        &lt;text class=&quot;connlabel&quot; x=&quot;330&quot; y=&quot;112&quot; text-anchor=&quot;start&quot;&gt;made of activities&lt;/text&gt;
+        &lt;line class=&quot;conn&quot; x1=&quot;320&quot; y1=&quot;94&quot; x2=&quot;320&quot; y2=&quot;124&quot; marker-end=&quot;url(#arrow)&quot;/&gt;
+
+        &lt;g class=&quot;node c-teal&quot; onclick=&quot;showDetail(&#x27;activity&#x27;,this)&quot;&gt;
+          &lt;rect x=&quot;80&quot; y=&quot;124&quot; width=&quot;480&quot; height=&quot;64&quot; rx=&quot;12&quot; stroke-width=&quot;0.75&quot;/&gt;
+          &lt;text class=&quot;th&quot; x=&quot;320&quot; y=&quot;150&quot; text-anchor=&quot;middle&quot; dominant-baseline=&quot;central&quot;&gt;Activity&lt;/text&gt;
+          &lt;text class=&quot;ts&quot; x=&quot;320&quot; y=&quot;170&quot; text-anchor=&quot;middle&quot; dominant-baseline=&quot;central&quot;&gt;a reusable unit of capability&lt;/text&gt;
+        &lt;/g&gt;
+        &lt;text class=&quot;connlabel&quot; x=&quot;330&quot; y=&quot;206&quot; text-anchor=&quot;start&quot;&gt;resolves a scope&lt;/text&gt;
+        &lt;line class=&quot;conn&quot; x1=&quot;320&quot; y1=&quot;188&quot; x2=&quot;320&quot; y2=&quot;218&quot; marker-end=&quot;url(#arrow)&quot;/&gt;
+
+        &lt;g class=&quot;node c-coral&quot; onclick=&quot;showDetail(&#x27;scope&#x27;,this)&quot;&gt;
+          &lt;rect x=&quot;80&quot; y=&quot;218&quot; width=&quot;480&quot; height=&quot;64&quot; rx=&quot;12&quot; stroke-width=&quot;0.75&quot;/&gt;
+          &lt;text class=&quot;th&quot; x=&quot;320&quot; y=&quot;244&quot; text-anchor=&quot;middle&quot; dominant-baseline=&quot;central&quot;&gt;Scope&lt;/text&gt;
+          &lt;text class=&quot;ts&quot; x=&quot;320&quot; y=&quot;264&quot; text-anchor=&quot;middle&quot; dominant-baseline=&quot;central&quot;&gt;which data — a path through the org&lt;/text&gt;
+        &lt;/g&gt;
+
+        &lt;line class=&quot;conn&quot; x1=&quot;193&quot; y1=&quot;282&quot; x2=&quot;193&quot; y2=&quot;312&quot; marker-end=&quot;url(#arrow)&quot;/&gt;
+        &lt;line class=&quot;conn&quot; x1=&quot;447&quot; y1=&quot;282&quot; x2=&quot;447&quot; y2=&quot;312&quot; marker-end=&quot;url(#arrow)&quot;/&gt;
+        &lt;line class=&quot;conn-dash&quot; x1=&quot;320&quot; y1=&quot;282&quot; x2=&quot;320&quot; y2=&quot;420&quot;/&gt;
+
+        &lt;g class=&quot;node c-gray&quot; onclick=&quot;showDetail(&#x27;access&#x27;,this)&quot;&gt;
+          &lt;rect x=&quot;80&quot; y=&quot;312&quot; width=&quot;225&quot; height=&quot;58&quot; rx=&quot;10&quot; stroke-width=&quot;0.75&quot;/&gt;
+          &lt;text class=&quot;th&quot; x=&quot;192&quot; y=&quot;335&quot; text-anchor=&quot;middle&quot; dominant-baseline=&quot;central&quot;&gt;Access&lt;/text&gt;
+          &lt;text class=&quot;ts&quot; x=&quot;192&quot; y=&quot;354&quot; text-anchor=&quot;middle&quot; dominant-baseline=&quot;central&quot;&gt;additive — all on device&lt;/text&gt;
+        &lt;/g&gt;
+        &lt;g class=&quot;node c-gray&quot; onclick=&quot;showDetail(&#x27;display&#x27;,this)&quot;&gt;
+          &lt;rect x=&quot;335&quot; y=&quot;312&quot; width=&quot;225&quot; height=&quot;58&quot; rx=&quot;10&quot; stroke-width=&quot;0.75&quot;/&gt;
+          &lt;text class=&quot;th&quot; x=&quot;447&quot; y=&quot;335&quot; text-anchor=&quot;middle&quot; dominant-baseline=&quot;central&quot;&gt;Display&lt;/text&gt;
+          &lt;text class=&quot;ts&quot; x=&quot;447&quot; y=&quot;354&quot; text-anchor=&quot;middle&quot; dominant-baseline=&quot;central&quot;&gt;scoped per config&lt;/text&gt;
+        &lt;/g&gt;
+
+        &lt;g class=&quot;node c-gray&quot; onclick=&quot;showDetail(&#x27;deferred&#x27;,this)&quot;&gt;
+          &lt;rect x=&quot;80&quot; y=&quot;420&quot; width=&quot;480&quot; height=&quot;62&quot; rx=&quot;12&quot; stroke-width=&quot;0.75&quot; stroke-dasharray=&quot;5 4&quot;/&gt;
+          &lt;text class=&quot;th&quot; x=&quot;320&quot; y=&quot;444&quot; text-anchor=&quot;middle&quot; dominant-baseline=&quot;central&quot;&gt;Differential scope&lt;/text&gt;
+          &lt;text class=&quot;ts&quot; x=&quot;320&quot; y=&quot;464&quot; text-anchor=&quot;middle&quot; dominant-baseline=&quot;central&quot;&gt;deferred — not blocked&lt;/text&gt;
+        &lt;/g&gt;
+      &lt;/svg&gt;
+    &lt;/div&gt;
+      &lt;div class=&quot;notes&quot;&gt;
+        &lt;div class=&quot;nh&quot;&gt;Open items &amp;amp; notes&lt;/div&gt;
+        &lt;div class=&quot;item&quot;&gt;— &lt;b&gt;The UI layer is protective.&lt;/b&gt; Keeping scope out of the view-authoring layer makes the config an extra check: a config mistake over-shows, but the underlying access layer still holds. Layering is a safety property, not just tidiness.&lt;/div&gt;
+        &lt;div class=&quot;item&quot;&gt;— &lt;b&gt;Form-dropdown gap.&lt;/b&gt; Display scoping holds everywhere except form dropdowns, which still list all accessible entities regardless of the config selector. Needs form selectors extended.&lt;/div&gt;
+        &lt;div class=&quot;item&quot;&gt;— &lt;b&gt;Timing.&lt;/b&gt; Per-config display scoping isn&#x27;t built in the enterprise app yet.&lt;/div&gt;
+        &lt;div class=&quot;item&quot;&gt;— &lt;b&gt;Assignment.&lt;/b&gt; How a config attaches to a user — a permission or a semantic link — is still open.&lt;/div&gt;
+        &lt;div class=&quot;item&quot;&gt;— &lt;b&gt;Activity refinement.&lt;/b&gt; A &quot;job to be done&quot; is hard to model one-to-one; activities may need refining as real jobs are mapped.&lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+
+    &lt;div&gt;
+      &lt;div id=&quot;panel&quot;&gt;
+        &lt;div class=&quot;ph&quot;&gt;&lt;span style=&quot;font-size:20px&quot;&gt;&amp;larr;&lt;/span&gt;Click any layer to read what it is, how it connects, and its open questions.&lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+
+  &lt;footer&gt;
+    &lt;span&gt;Trellis Enterprise Platform — access model&lt;/span&gt;
+    &lt;span&gt;Product · Jul 2026&lt;/span&gt;
+  &lt;/footer&gt;
+&lt;/div&gt;
+
+&lt;script&gt;
+  var DETAIL = {
+    role:{tag:&#x27;blue&#x27;,name:&#x27;Role&#x27;,html:&quot;&lt;p&gt;A composition — a bundle of activities arranged into one navigable experience, with a scope bound to each. It&#x27;s a top-level config (an &lt;em&gt;experience&lt;/em&gt;); the activities inside are configs one level down. Switching roles is a view-level recompose, not a re-login — all data is already on the device, so the role only decides what&#x27;s shown. Most people have one role and never switch; a chooser appears only for genuine two-role users.&lt;/p&gt;&lt;div class=&#x27;info-flag&#x27;&gt;&lt;strong&gt;Open:&lt;/strong&gt; do two roles&#x27; shared views (e.g. Settings) merge, or stay separate behind a chooser? The model assumes a chooser — simpler and safer. Routed to design.&lt;/div&gt;&quot;},
+    activity:{tag:&#x27;teal&#x27;,name:&#x27;Activity&#x27;,html:&quot;&lt;p&gt;A unit of capability — the modules and features for one job: a form, its dashboard, the context it needs. Grantable on its own, reusable across roles, and scope-blind — the same activity appears in a head teacher&#x27;s role and a supervisor&#x27;s role unchanged; only the bound scope differs. Authored as a config, one level below the role.&lt;/p&gt;&lt;div class=&#x27;info-flag&#x27;&gt;&lt;strong&gt;Open:&lt;/strong&gt; a job to be done is hard to model one-to-one — activities may need refining as real jobs are mapped.&lt;/div&gt;&quot;},
+    scope:{tag:&#x27;coral&#x27;,name:&#x27;Scope&#x27;,html:&quot;&lt;p&gt;Which data an activity operates on — resolved as a path through the org structure (class within school within zone). Scope is bound per activity within a role, so the same activity resolves a different slice depending on the role it sits in. It has two facets, &lt;em&gt;access&lt;/em&gt; and &lt;em&gt;display&lt;/em&gt; — see below — and one deferred extension.&lt;/p&gt;&quot;},
+    access:{tag:&#x27;gray&#x27;,name:&#x27;Access — additive&#x27;,html:&quot;&lt;p&gt;All the data a person&#x27;s roles can reach sits on the device, as one set. That&#x27;s safe, because it&#x27;s one authorised person — there&#x27;s no one to hide it from. (Two different users sharing a device is a separate concern, outside this model.)&lt;/p&gt;&quot;},
+    display:{tag:&#x27;gray&#x27;,name:&#x27;Display — per config&#x27;,html:&quot;&lt;p&gt;Each experience&#x27;s selector shows only its slice of the on-device data. This is what lets one person hold two roles and see the right data in each — with no two accounts. It replaces the old two-account workaround for the same-person case.&lt;/p&gt;&lt;div class=&#x27;info-flag&#x27;&gt;&lt;strong&gt;Not built yet&lt;/strong&gt; in the enterprise app. And: form dropdowns still list all accessible entities regardless of the selector — display scoping holds everywhere except there. Needs form selectors extended.&lt;/div&gt;&quot;},
+    deferred:{tag:&#x27;gray&#x27;,name:&#x27;Differential scope&#x27;,html:&quot;&lt;p&gt;One person whose two roles have genuinely different scope — e.g. a teacher at one school who is also an ECDO across twenty. Rare, and not supported yet. Additive access already puts all the data on the device; what&#x27;s deferred is non-additive resolution per active role. Deliberately deferred, not blocked — the model leaves room for it.&lt;/p&gt;&quot;}
+  };
+  function showDetail(key,el){
+    document.querySelectorAll(&#x27;.node&#x27;).forEach(function(n){n.classList.remove(&#x27;active&#x27;)});
+    if(el) el.classList.add(&#x27;active&#x27;);
+    var d=DETAIL[key];
+    document.getElementById(&#x27;panel&#x27;).innerHTML=&#x27;&lt;span class=&quot;ptag pt-&#x27;+d.tag+&#x27;&quot;&gt;&#x27;+d.tag+&#x27;&lt;/span&gt;&lt;h3&gt;&#x27;+d.name+&#x27;&lt;/h3&gt;&#x27;+d.html;
+  }
+&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+"></iframe>
+    <iframe data-i="2" sandbox="allow-scripts" srcdoc="&lt;!DOCTYPE html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;head&gt;
+&lt;meta charset=&quot;UTF-8&quot;&gt;
+&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1.0&quot;&gt;
+&lt;title&gt;Scope is a lattice — EIDU&#x27;s two crossing hierarchies&lt;/title&gt;
+&lt;link rel=&quot;preconnect&quot; href=&quot;https://fonts.googleapis.com&quot;&gt;
+&lt;link rel=&quot;preconnect&quot; href=&quot;https://fonts.gstatic.com&quot; crossorigin&gt;
+&lt;link href=&quot;https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600&amp;family=DM+Mono:wght@400;500&amp;display=swap&quot; rel=&quot;stylesheet&quot;&gt;
+&lt;style&gt;
+  :root{
+    --bg:#ffffff; --bg2:#f8f7f5; --bg3:#f1efe9;
+    --border:#e5e3dc; --border2:#d4d1c8;
+    --text:#1a1916; --text2:#5a5850; --text3:#9a9790;
+    --accent:#8a6f3e;
+    --coral-fill:#faece7; --coral-stroke:#993c1d; --coral-title:#4a1b0c; --coral-sub:#993c1d;
+    --amber:#ba7517; --amber-title:#633806;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--bg);color:var(--text);font-family:&#x27;Syne&#x27;,system-ui,sans-serif;line-height:1.6}
+  .page{max-width:1080px;margin:0 auto;padding:40px 32px 72px}
+  .label{font-family:&#x27;DM Mono&#x27;,monospace;font-size:10px;letter-spacing:.5px;text-transform:uppercase;color:var(--accent)}
+  header{display:flex;justify-content:space-between;align-items:flex-start;gap:24px;border-bottom:1px solid var(--border);padding-bottom:20px;margin-bottom:28px}
+  header h1{font-size:26px;font-weight:600;margin:6px 0 4px;letter-spacing:-.3px}
+  header .sub{font-size:14px;color:var(--text2)}
+  .meta{font-family:&#x27;DM Mono&#x27;,monospace;font-size:10.5px;color:var(--text2);text-align:right;line-height:1.9;white-space:nowrap}
+  .meta b{color:var(--text3);font-weight:400}
+  .columns{display:grid;grid-template-columns:1fr 360px;gap:20px;align-items:start}
+  .diagram-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:12px}
+  .edge{stroke:#d4d1c8;stroke-width:1.5;transition:stroke .15s,stroke-width .15s}
+  .edge.lit{stroke:var(--coral-stroke);stroke-width:2.5}
+  .lnode{cursor:pointer}
+  .lnode circle{fill:#f1efe8;stroke:#b4b2a9;stroke-width:1.5;transition:fill .15s,stroke .15s}
+  .lnode:hover circle{stroke:var(--coral-stroke);stroke-width:2.5}
+  .lnode.lit circle{fill:var(--coral-fill);stroke:var(--coral-stroke);stroke-width:2}
+  .lnode.sel circle{stroke:var(--coral-stroke);stroke-width:3.5}
+  .lnlbl{font-family:&#x27;Syne&#x27;;font-weight:500;font-size:12px;fill:var(--text2)}
+  .lnode.lit .lnlbl{fill:var(--text)}
+  .lnrole{font-family:&#x27;DM Mono&#x27;;font-weight:400;font-size:10px;fill:var(--text3)}
+  .lnode.lit .lnrole{fill:var(--coral-stroke)}
+  .col-cap{font-family:&#x27;DM Mono&#x27;;font-weight:400;font-size:10px;fill:var(--accent);letter-spacing:.5px;text-transform:uppercase}
+  .pills{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}
+  .rl{font-family:&#x27;Syne&#x27;;font-weight:500;font-size:12px;padding:6px 12px;border:1px solid var(--border);border-radius:20px;cursor:pointer;background:var(--bg);color:var(--text2)}
+  .rl:hover{border-color:var(--border2)}
+  .rl.on{background:var(--coral-fill);border-color:var(--coral-stroke);color:var(--coral-title)}
+  #panel{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:18px;min-height:150px}
+  #panel .ph{display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--text3);font-size:13px;text-align:center;padding:24px 10px;gap:8px}
+  #panel .ptag{display:inline-block;font-family:&#x27;DM Mono&#x27;,monospace;font-size:10px;text-transform:uppercase;letter-spacing:.5px;padding:3px 9px;border-radius:20px;margin-bottom:10px;background:var(--coral-fill);color:var(--coral-title)}
+  #panel h3{font-size:16px;font-weight:600;margin-bottom:8px}
+  #panel p{font-size:13.5px;color:var(--text2);line-height:1.65}
+  .info-flag{margin-top:11px;padding:9px 13px;background:#fdf6ee;border:1px solid #e8d4aa;border-radius:6px;font-size:12px;color:#7a5a28;line-height:1.6}
+  .info-flag strong{color:#5a3e18}
+  .notes{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:16px;margin-top:16px}
+  .notes .nh{font-family:&#x27;DM Mono&#x27;,monospace;font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--accent);margin-bottom:11px}
+  .notes .item{font-size:12.5px;color:var(--text2);line-height:1.55;margin-bottom:11px;padding-left:14px;text-indent:-14px}
+  .notes .item:last-child{margin-bottom:0}
+  .notes .item b{color:var(--text);font-weight:500}
+  footer{display:flex;justify-content:space-between;font-family:&#x27;DM Mono&#x27;,monospace;font-size:10px;color:var(--text3);margin-top:28px;border-top:1px solid var(--border);padding-top:14px}
+  @media(max-width:780px){.columns{grid-template-columns:1fr}}
+&lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;div class=&quot;page&quot;&gt;
+  &lt;header&gt;
+    &lt;div&gt;
+      &lt;div class=&quot;label&quot;&gt;Trellis Enterprise Platform · access model&lt;/div&gt;
+      &lt;h1&gt;Scope is a lattice&lt;/h1&gt;
+      &lt;div class=&quot;sub&quot;&gt;The primitive is configurable hierarchies. Two crossing trees is EIDU&#x27;s instance — a partner might have one, or a different shape.&lt;/div&gt;
+    &lt;/div&gt;
+    &lt;div class=&quot;meta&quot;&gt;&lt;b&gt;date&lt;/b&gt; Jul 2026&lt;br&gt;&lt;b&gt;status&lt;/b&gt; draft — for review&lt;br&gt;&lt;b&gt;shows&lt;/b&gt; reach, not visibility&lt;/div&gt;
+  &lt;/header&gt;
+
+  &lt;div class=&quot;columns&quot;&gt;
+    &lt;div&gt;
+      &lt;div class=&quot;diagram-wrap&quot;&gt;
+        &lt;svg width=&quot;100%&quot; viewBox=&quot;0 0 640 480&quot; role=&quot;img&quot; xmlns=&quot;http://www.w3.org/2000/svg&quot;&gt;
+          &lt;title&gt;EIDU&#x27;s scope lattice — two crossing hierarchies&lt;/title&gt;
+          &lt;desc&gt;An operational tree (state, unit, zone, school) and a government tree (state, senatorial district, local government, ward, school) cross, meeting only at school and state. Roles pin at nodes; clicking a role lights the schools it reaches.&lt;/desc&gt;
+
+          &lt;text class=&quot;col-cap&quot; x=&quot;150&quot; y=&quot;34&quot; text-anchor=&quot;middle&quot;&gt;operational&lt;/text&gt;
+          &lt;text class=&quot;col-cap&quot; x=&quot;500&quot; y=&quot;34&quot; text-anchor=&quot;middle&quot;&gt;government / location&lt;/text&gt;
+
+          &lt;line class=&quot;edge&quot; data-a=&quot;state&quot; data-b=&quot;unit&quot;   x1=&quot;320&quot; y1=&quot;56&quot;  x2=&quot;150&quot; y2=&quot;165&quot;/&gt;
+          &lt;line class=&quot;edge&quot; data-a=&quot;unit&quot;  data-b=&quot;zone&quot;   x1=&quot;150&quot; y1=&quot;165&quot; x2=&quot;150&quot; y2=&quot;305&quot;/&gt;
+          &lt;line class=&quot;edge&quot; data-a=&quot;zone&quot;  data-b=&quot;school&quot; x1=&quot;150&quot; y1=&quot;305&quot; x2=&quot;320&quot; y2=&quot;420&quot;/&gt;
+          &lt;line class=&quot;edge&quot; data-a=&quot;state&quot; data-b=&quot;sd&quot;     x1=&quot;320&quot; y1=&quot;56&quot;  x2=&quot;500&quot; y2=&quot;140&quot;/&gt;
+          &lt;line class=&quot;edge&quot; data-a=&quot;sd&quot;    data-b=&quot;lg&quot;     x1=&quot;500&quot; y1=&quot;140&quot; x2=&quot;500&quot; y2=&quot;255&quot;/&gt;
+          &lt;line class=&quot;edge&quot; data-a=&quot;lg&quot;    data-b=&quot;ward&quot;   x1=&quot;500&quot; y1=&quot;255&quot; x2=&quot;500&quot; y2=&quot;365&quot;/&gt;
+          &lt;line class=&quot;edge&quot; data-a=&quot;ward&quot;  data-b=&quot;school&quot; x1=&quot;500&quot; y1=&quot;365&quot; x2=&quot;320&quot; y2=&quot;420&quot;/&gt;
+
+          &lt;g class=&quot;lnode&quot; data-node=&quot;state&quot; onclick=&quot;pick(this,&#x27;state&#x27;)&quot;&gt;&lt;circle cx=&quot;320&quot; cy=&quot;56&quot; r=&quot;9&quot;/&gt;
+            &lt;text class=&quot;lnlbl&quot; x=&quot;320&quot; y=&quot;40&quot; text-anchor=&quot;middle&quot;&gt;State&lt;/text&gt;
+            &lt;text class=&quot;lnrole&quot; x=&quot;320&quot; y=&quot;26&quot; text-anchor=&quot;middle&quot;&gt;Regional Manager&lt;/text&gt;&lt;/g&gt;
+          &lt;g class=&quot;lnode&quot; data-node=&quot;unit&quot; onclick=&quot;pick(this,&#x27;unit&#x27;)&quot;&gt;&lt;circle cx=&quot;150&quot; cy=&quot;165&quot; r=&quot;9&quot;/&gt;
+            &lt;text class=&quot;lnlbl&quot; x=&quot;134&quot; y=&quot;162&quot; text-anchor=&quot;end&quot;&gt;Unit&lt;/text&gt;
+            &lt;text class=&quot;lnrole&quot; x=&quot;134&quot; y=&quot;177&quot; text-anchor=&quot;end&quot;&gt;EO ×2&lt;/text&gt;&lt;/g&gt;
+          &lt;g class=&quot;lnode&quot; data-node=&quot;zone&quot; onclick=&quot;pick(this,&#x27;zone&#x27;)&quot;&gt;&lt;circle cx=&quot;150&quot; cy=&quot;305&quot; r=&quot;9&quot;/&gt;
+            &lt;text class=&quot;lnlbl&quot; x=&quot;134&quot; y=&quot;302&quot; text-anchor=&quot;end&quot;&gt;Zone&lt;/text&gt;
+            &lt;text class=&quot;lnrole&quot; x=&quot;134&quot; y=&quot;317&quot; text-anchor=&quot;end&quot;&gt;QAO + Fellow&lt;/text&gt;&lt;/g&gt;
+          &lt;g class=&quot;lnode&quot; data-node=&quot;sd&quot; onclick=&quot;pick(this,&#x27;sd&#x27;)&quot;&gt;&lt;circle cx=&quot;500&quot; cy=&quot;140&quot; r=&quot;9&quot;/&gt;
+            &lt;text class=&quot;lnlbl&quot; x=&quot;516&quot; y=&quot;143&quot; text-anchor=&quot;start&quot;&gt;Senatorial district&lt;/text&gt;&lt;/g&gt;
+          &lt;g class=&quot;lnode&quot; data-node=&quot;lg&quot; onclick=&quot;pick(this,&#x27;lg&#x27;)&quot;&gt;&lt;circle cx=&quot;500&quot; cy=&quot;255&quot; r=&quot;9&quot;/&gt;
+            &lt;text class=&quot;lnlbl&quot; x=&quot;516&quot; y=&quot;252&quot; text-anchor=&quot;start&quot;&gt;Local government&lt;/text&gt;
+            &lt;text class=&quot;lnrole&quot; x=&quot;516&quot; y=&quot;267&quot; text-anchor=&quot;start&quot;&gt;Head of Section&lt;/text&gt;&lt;/g&gt;
+          &lt;g class=&quot;lnode&quot; data-node=&quot;ward&quot; onclick=&quot;pick(this,&#x27;ward&#x27;)&quot;&gt;&lt;circle cx=&quot;500&quot; cy=&quot;365&quot; r=&quot;9&quot;/&gt;
+            &lt;text class=&quot;lnlbl&quot; x=&quot;516&quot; y=&quot;368&quot; text-anchor=&quot;start&quot;&gt;Ward&lt;/text&gt;&lt;/g&gt;
+          &lt;g class=&quot;lnode&quot; data-node=&quot;school&quot; onclick=&quot;pick(this,&#x27;school&#x27;)&quot;&gt;&lt;circle cx=&quot;320&quot; cy=&quot;420&quot; r=&quot;9&quot;/&gt;
+            &lt;text class=&quot;lnlbl&quot; x=&quot;320&quot; y=&quot;443&quot; text-anchor=&quot;middle&quot;&gt;School&lt;/text&gt;
+            &lt;text class=&quot;lnrole&quot; x=&quot;320&quot; y=&quot;459&quot; text-anchor=&quot;middle&quot;&gt;Head Teacher&lt;/text&gt;&lt;/g&gt;
+        &lt;/svg&gt;
+      &lt;/div&gt;
+      &lt;div class=&quot;notes&quot;&gt;
+        &lt;div class=&quot;nh&quot;&gt;Forward threads &amp;amp; notes&lt;/div&gt;
+        &lt;div class=&quot;item&quot;&gt;— &lt;b&gt;Reach vs visibility.&lt;/b&gt; This lattice shows &lt;b&gt;reach&lt;/b&gt; — which schools a role&#x27;s node reaches. &lt;b&gt;Visibility&lt;/b&gt; — who sees whose submissions, how deep — is a separate axis: aggregate always, drill gated by data access, own always. Raw submissions are a far-off parent-app question.&lt;/div&gt;
+        &lt;div class=&quot;item&quot;&gt;— &lt;b&gt;The primitive: configurable hierarchies.&lt;/b&gt; Scope is a configurable set of hierarchies, roles anchored to nodes. How many trees, of what shape, whether they cross — configuration, not architecture. EIDU&#x27;s two crossing trees is one instance.&lt;/div&gt;
+        &lt;div class=&quot;item&quot;&gt;— &lt;b&gt;A third hierarchy (future).&lt;/b&gt; Fellows may become their own partner hierarchy rather than sitting on the operational tree. The primitive allows N — so that&#x27;s configuration, not a rebuild.&lt;/div&gt;
+        &lt;div class=&quot;item&quot;&gt;— &lt;b&gt;Region doesn&#x27;t exist yet.&lt;/b&gt; RMs are assigned directly to states. Grouping states into regions is gated on list-of-entities, which is being built.&lt;/div&gt;
+        &lt;div class=&quot;item&quot;&gt;— &lt;b&gt;Trees differ per deployment.&lt;/b&gt; The operational tree is EIDU&#x27;s, reused across its deployments. Each government&#x27;s tree is its own and differs per deployment.&lt;/div&gt;
+        &lt;div class=&quot;item&quot;&gt;— &lt;b&gt;Open decision: where does scope live?&lt;/b&gt; This model treats scope as its own primitive, because today it&#x27;s reconstructed fragilely from roles, coverage and links. An alternative view holds that scope needs no separate primitive — role-based access rights inside each config could express the same thing. Both are on the table; the cleanest way to settle it is to build a real config for the hardest case (this lattice) and see whether it stays clean.&lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+
+    &lt;div&gt;
+      &lt;div id=&quot;panel&quot;&gt;
+        &lt;div class=&quot;ph&quot;&gt;&lt;span style=&quot;font-size:20px&quot;&gt;&amp;larr;&lt;/span&gt;Click a node to light the schools that level reaches, and see the role(s) anchored there.&lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+
+  &lt;footer&gt;
+    &lt;span&gt;Trellis Enterprise Platform — access model&lt;/span&gt;
+    &lt;span&gt;Product · Jul 2026&lt;/span&gt;
+  &lt;/footer&gt;
+&lt;/div&gt;
+
+&lt;script&gt;
+  var REACH={
+    rm:[&quot;state&quot;,&quot;unit&quot;,&quot;sd&quot;,&quot;zone&quot;,&quot;lg&quot;,&quot;ward&quot;,&quot;school&quot;],
+    eo:[&quot;unit&quot;,&quot;zone&quot;,&quot;school&quot;],
+    qao:[&quot;zone&quot;,&quot;school&quot;],
+    fellow:[&quot;zone&quot;,&quot;school&quot;],
+    hos:[&quot;lg&quot;,&quot;ward&quot;,&quot;school&quot;],
+    ht:[&quot;school&quot;]
+  };
+  var DETAIL={
+    ht:{name:&quot;Head Teacher — school&quot;,html:&quot;&lt;p&gt;Sits at a single school on the operational tree. Reaches one school — the leaf case. Everything above reaches down to it.&lt;/p&gt;&quot;},
+    qao:{name:&quot;Teacher supervisor / QAO — zone&quot;,html:&quot;&lt;p&gt;Sits at a zone on the operational tree. Reaches every school in that zone.&lt;/p&gt;&quot;},
+    fellow:{name:&quot;Fellow — zone (external partner)&quot;,html:&quot;&lt;p&gt;Sits at a zone too, so it reaches the &lt;em&gt;same&lt;/em&gt; schools as the QAO. What it can see there is different — schools, but not user data. Reach is identical; visibility is the separate axis.&lt;/p&gt;&lt;div class=&#x27;info-flag&#x27;&gt;&lt;strong&gt;Future:&lt;/strong&gt; Fellows may become their own third (partner) hierarchy rather than sitting on the operational tree. The primitive allows N hierarchies, so that&#x27;s configuration, not a rebuild.&lt;/div&gt;&quot;},
+    eo:{name:&quot;EO — unit&quot;,html:&quot;&lt;p&gt;Sits at a unit, above the zones. Reaches every school in the unit and manages the QAOs below. Two per unit — a senior and an associate — so a level can hold more than one person.&lt;/p&gt;&quot;},
+    hos:{name:&quot;Head of Section — local government&quot;,html:&quot;&lt;p&gt;Sits at a local government on the &lt;em&gt;government&lt;/em&gt; tree — a different partition of the same schools. Reaches every school in the LGA. Sees only government users (QAOs, and maybe head teachers), not Fellows or EOs.&lt;/p&gt;&lt;div class=&#x27;info-flag&#x27;&gt;&lt;strong&gt;Two things:&lt;/strong&gt; government geography (ward, LGA, senatorial district) crosses EIDU&#x27;s operational geography (zone, unit) — they meet only at school and state. And whether HoS sees head teachers is still open.&lt;/div&gt;&quot;},
+    rm:{name:&quot;Regional Manager — state&quot;,html:&quot;&lt;p&gt;Sits at the state — the root. Reaches everything, both trees. Creates all users today (QAOs, EOs, head teachers), so its visibility is full-depth: RM owns user creation.&lt;/p&gt;&lt;div class=&#x27;info-flag&#x27;&gt;&lt;strong&gt;Region doesn&#x27;t exist yet:&lt;/strong&gt; RMs are assigned directly to states. A region grouping is gated on list-of-entities, which is being built.&lt;/div&gt;&quot;}
+  };
+  var NODEINFO={
+    state:{tag:&quot;reach&quot;,reach:REACH.rm,name:DETAIL.rm.name,html:DETAIL.rm.html},
+    unit:{tag:&quot;reach&quot;,reach:REACH.eo,name:DETAIL.eo.name,html:DETAIL.eo.html},
+    zone:{tag:&quot;two roles&quot;,reach:REACH.qao,name:&quot;Zone — two roles anchored here&quot;,html:&quot;&lt;p&gt;The zone is where &lt;em&gt;two&lt;/em&gt; roles sit: the &lt;b&gt;QAO&lt;/b&gt; (teacher supervisor) and the &lt;b&gt;Fellow&lt;/b&gt; (external partner). Both reach the &lt;em&gt;same&lt;/em&gt; schools — everything in the zone. What differs is what they can see there: the QAO reaches head-teacher data; the Fellow sees schools but not user data. Same node, same reach, different visibility.&lt;/p&gt;&lt;div class=&#x27;info-flag&#x27;&gt;&lt;strong&gt;The clearest proof&lt;/strong&gt; that reach (where) and visibility (what you see) are separate axes — two roles at one node, one reach, two visibilities. &lt;strong&gt;Future:&lt;/strong&gt; Fellows may become their own third (partner) hierarchy.&lt;/div&gt;&quot;},
+    lg:{tag:&quot;reach&quot;,reach:REACH.hos,name:DETAIL.hos.name,html:DETAIL.hos.html},
+    school:{tag:&quot;reach&quot;,reach:REACH.ht,name:DETAIL.ht.name,html:DETAIL.ht.html},
+    sd:{tag:&quot;structural&quot;,reach:[&quot;sd&quot;],name:&quot;Senatorial district — structural&quot;,html:&quot;&lt;p&gt;A structural level on the government tree, between local government and state. No role is anchored here today — it&#x27;s part of the path, not a seat someone sits in.&lt;/p&gt;&quot;},
+    ward:{tag:&quot;structural&quot;,reach:[&quot;ward&quot;],name:&quot;Ward — structural&quot;,html:&quot;&lt;p&gt;A structural level on the government tree, below local government. Not populated yet, and no role anchored here — part of the path, not a seat.&lt;/p&gt;&quot;}
+  };
+  function pick(el,key){
+    document.querySelectorAll(&#x27;.lnode&#x27;).forEach(function(n){n.classList.remove(&#x27;sel&#x27;)});
+    el.classList.add(&#x27;sel&#x27;);
+    var info=NODEINFO[key]; var set={}; (info.reach||[]).forEach(function(n){set[n]=1});
+    document.querySelectorAll(&#x27;.lnode&#x27;).forEach(function(g){g.classList.toggle(&#x27;lit&#x27;,!!set[g.getAttribute(&#x27;data-node&#x27;)])});
+    document.querySelectorAll(&#x27;.edge&#x27;).forEach(function(ed){ed.classList.toggle(&#x27;lit&#x27;,!!set[ed.getAttribute(&#x27;data-a&#x27;)]&amp;&amp;!!set[ed.getAttribute(&#x27;data-b&#x27;)])});
+    document.getElementById(&#x27;panel&#x27;).innerHTML=&#x27;&lt;span class=&quot;ptag&quot;&gt;&#x27;+info.tag+&#x27;&lt;/span&gt;&lt;h3&gt;&#x27;+info.name+&#x27;&lt;/h3&gt;&#x27;+info.html;
+  }
+&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+"></iframe>
+    <iframe data-i="3" sandbox="allow-scripts" srcdoc="&lt;!DOCTYPE html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;head&gt;
+&lt;meta charset=&quot;UTF-8&quot;&gt;
+&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1.0&quot;&gt;
+&lt;title&gt;The four-action grammar — appendix&lt;/title&gt;
+&lt;link rel=&quot;preconnect&quot; href=&quot;https://fonts.googleapis.com&quot;&gt;
+&lt;link rel=&quot;preconnect&quot; href=&quot;https://fonts.gstatic.com&quot; crossorigin&gt;
+&lt;link href=&quot;https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600&amp;family=DM+Mono:wght@400;500&amp;display=swap&quot; rel=&quot;stylesheet&quot;&gt;
+&lt;style&gt;
+  :root{
+    --bg:#ffffff; --bg2:#f8f7f5; --bg3:#f1efe9;
+    --border:#e5e3dc; --border2:#d4d1c8;
+    --text:#1a1916; --text2:#5a5850; --text3:#9a9790;
+    --accent:#8a6f3e;
+    --coral-fill:#faece7; --coral-stroke:#993c1d; --coral-title:#4a1b0c; --coral-sub:#993c1d;
+    --amber:#ba7517; --amber-title:#633806;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--bg);color:var(--text);font-family:&#x27;Syne&#x27;,system-ui,sans-serif;line-height:1.6}
+  .page{max-width:1080px;margin:0 auto;padding:40px 32px 72px}
+  .label{font-family:&#x27;DM Mono&#x27;,monospace;font-size:10px;letter-spacing:.5px;text-transform:uppercase;color:var(--accent)}
+  header{display:flex;justify-content:space-between;align-items:flex-start;gap:24px;border-bottom:1px solid var(--border);padding-bottom:20px;margin-bottom:28px}
+  header h1{font-size:26px;font-weight:600;margin:6px 0 4px;letter-spacing:-.3px}
+  header .sub{font-size:14px;color:var(--text2)}
+  .meta{font-family:&#x27;DM Mono&#x27;,monospace;font-size:10.5px;color:var(--text2);text-align:right;line-height:1.9;white-space:nowrap}
+  .meta b{color:var(--text3);font-weight:400}
+  .columns{display:grid;grid-template-columns:1fr 360px;gap:20px;align-items:start}
+  .diagram-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:12px}
+  svg .th{font-family:&#x27;Syne&#x27;;font-weight:600;font-size:14px}
+  svg .ts{font-family:&#x27;Syne&#x27;;font-weight:400;font-size:11px}
+  svg .tier{font-family:&#x27;DM Mono&#x27;;font-weight:400;font-size:10px;fill:var(--text3);letter-spacing:.5px;text-transform:uppercase}
+  svg .badge{font-family:&#x27;DM Mono&#x27;;font-weight:500;font-size:9.5px;fill:#fff;letter-spacing:.5px;text-transform:uppercase}
+  svg .priv{font-family:&#x27;DM Mono&#x27;;font-weight:400;font-size:9.5px;fill:var(--text3);letter-spacing:.5px}
+  .node{cursor:pointer}
+  .node rect{transition:stroke-width .12s,opacity .12s}
+  .node:hover rect{opacity:.86}
+  .node.active rect{stroke-width:2.5 !important}
+  .c-coral rect{fill:var(--coral-fill);stroke:var(--coral-stroke)} .c-coral .th{fill:var(--coral-title)} .c-coral .ts{fill:var(--coral-sub)}
+  .emph rect{stroke-width:1.6}
+  .spine{stroke:var(--border2);stroke-width:1.2;stroke-dasharray:4 4}
+  #panel{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:18px;min-height:150px}
+  #panel .ph{display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--text3);font-size:13px;text-align:center;padding:24px 10px;gap:8px}
+  #panel .ptag{display:inline-block;font-family:&#x27;DM Mono&#x27;,monospace;font-size:10px;text-transform:uppercase;letter-spacing:.5px;padding:3px 9px;border-radius:20px;margin-bottom:10px;background:var(--coral-fill);color:var(--coral-title)}
+  #panel h3{font-size:16px;font-weight:600;margin-bottom:8px}
+  #panel p{font-size:13.5px;color:var(--text2);line-height:1.65}
+  #panel em{color:var(--text);font-style:normal;font-weight:500}
+  .info-flag{margin-top:11px;padding:9px 13px;background:#fdf6ee;border:1px solid #e8d4aa;border-radius:6px;font-size:12px;color:#7a5a28;line-height:1.6}
+  .info-flag strong{color:#5a3e18}
+  .notes{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:16px;margin-top:16px}
+  .notes .nh{font-family:&#x27;DM Mono&#x27;,monospace;font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--accent);margin-bottom:11px}
+  .notes .item{font-size:12.5px;color:var(--text2);line-height:1.55;margin-bottom:11px;padding-left:14px;text-indent:-14px}
+  .notes .item:last-child{margin-bottom:0}
+  .notes .item b{color:var(--text);font-weight:500}
+  footer{display:flex;justify-content:space-between;font-family:&#x27;DM Mono&#x27;,monospace;font-size:10px;color:var(--text3);margin-top:28px;border-top:1px solid var(--border);padding-top:14px}
+  @media(max-width:780px){.columns{grid-template-columns:1fr}}
+&lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;div class=&quot;page&quot;&gt;
+  &lt;header&gt;
+    &lt;div&gt;
+      &lt;div class=&quot;label&quot;&gt;Trellis Enterprise Platform · access model · appendix&lt;/div&gt;
+      &lt;h1&gt;The four-action grammar&lt;/h1&gt;
+      &lt;div class=&quot;sub&quot;&gt;Read · record an event · add an entity · define entity types — and the middle a two-box model forgets.&lt;/div&gt;
+    &lt;/div&gt;
+    &lt;div class=&quot;meta&quot;&gt;&lt;b&gt;date&lt;/b&gt; Jul 2026&lt;br&gt;&lt;b&gt;status&lt;/b&gt; draft — for spar&lt;br&gt;&lt;b&gt;confirmed&lt;/b&gt; edits are events&lt;/div&gt;
+  &lt;/header&gt;
+
+  &lt;div class=&quot;columns&quot;&gt;
+    &lt;div&gt;
+      &lt;div class=&quot;diagram-wrap&quot;&gt;
+        &lt;svg width=&quot;100%&quot; viewBox=&quot;0 0 640 356&quot; role=&quot;img&quot; xmlns=&quot;http://www.w3.org/2000/svg&quot;&gt;
+          &lt;title&gt;The four-action grammar in three privilege tiers&lt;/title&gt;
+          &lt;desc&gt;Consume (read, record an event), populate (add an entity — the missing middle), define (define entity types). Privilege rises from consume up to define.&lt;/desc&gt;
+
+          &lt;line class=&quot;spine&quot; x1=&quot;66&quot; y1=&quot;300&quot; x2=&quot;66&quot; y2=&quot;40&quot;/&gt;
+          &lt;text class=&quot;priv&quot; x=&quot;60&quot; y=&quot;34&quot; text-anchor=&quot;end&quot; transform=&quot;rotate(-90 60 34)&quot;&gt;&lt;/text&gt;
+          &lt;text class=&quot;priv&quot; x=&quot;78&quot; y=&quot;36&quot; text-anchor=&quot;start&quot;&gt;more privilege &amp;#8593;&lt;/text&gt;
+
+          &lt;text class=&quot;tier&quot; x=&quot;24&quot; y=&quot;66&quot; text-anchor=&quot;start&quot;&gt;define&lt;/text&gt;
+          &lt;g class=&quot;node c-coral&quot; onclick=&quot;showDetail(&#x27;define&#x27;,this)&quot;&gt;
+            &lt;rect x=&quot;210&quot; y=&quot;40&quot; width=&quot;220&quot; height=&quot;52&quot; rx=&quot;10&quot; stroke-width=&quot;0.75&quot;/&gt;
+            &lt;text class=&quot;th&quot; x=&quot;320&quot; y=&quot;60&quot; text-anchor=&quot;middle&quot; dominant-baseline=&quot;central&quot;&gt;define entity types&lt;/text&gt;
+            &lt;text class=&quot;ts&quot; x=&quot;320&quot; y=&quot;79&quot; text-anchor=&quot;middle&quot; dominant-baseline=&quot;central&quot;&gt;change the structure · admin&lt;/text&gt;
+          &lt;/g&gt;
+
+          &lt;rect x=&quot;252&quot; y=&quot;112&quot; width=&quot;136&quot; height=&quot;17&quot; rx=&quot;8.5&quot; fill=&quot;var(--coral-stroke)&quot;/&gt;
+          &lt;text class=&quot;badge&quot; x=&quot;320&quot; y=&quot;121&quot; text-anchor=&quot;middle&quot; dominant-baseline=&quot;central&quot;&gt;the missing middle&lt;/text&gt;
+          &lt;text class=&quot;tier&quot; x=&quot;24&quot; y=&quot;171&quot; text-anchor=&quot;start&quot;&gt;populate&lt;/text&gt;
+          &lt;g class=&quot;node c-coral emph&quot; onclick=&quot;showDetail(&#x27;add&#x27;,this)&quot;&gt;
+            &lt;rect x=&quot;190&quot; y=&quot;140&quot; width=&quot;260&quot; height=&quot;58&quot; rx=&quot;10&quot; stroke-width=&quot;0.75&quot;/&gt;
+            &lt;text class=&quot;th&quot; x=&quot;320&quot; y=&quot;162&quot; text-anchor=&quot;middle&quot; dominant-baseline=&quot;central&quot;&gt;add an entity&lt;/text&gt;
+            &lt;text class=&quot;ts&quot; x=&quot;320&quot; y=&quot;181&quot; text-anchor=&quot;middle&quot; dominant-baseline=&quot;central&quot;&gt;create a noun · RM, form editor&lt;/text&gt;
+          &lt;/g&gt;
+
+          &lt;text class=&quot;tier&quot; x=&quot;24&quot; y=&quot;278&quot; text-anchor=&quot;start&quot;&gt;consume&lt;/text&gt;
+          &lt;g class=&quot;node c-coral&quot; onclick=&quot;showDetail(&#x27;read&#x27;,this)&quot;&gt;
+            &lt;rect x=&quot;96&quot; y=&quot;248&quot; width=&quot;200&quot; height=&quot;56&quot; rx=&quot;10&quot; stroke-width=&quot;0.75&quot;/&gt;
+            &lt;text class=&quot;th&quot; x=&quot;196&quot; y=&quot;270&quot; text-anchor=&quot;middle&quot; dominant-baseline=&quot;central&quot;&gt;read&lt;/text&gt;
+            &lt;text class=&quot;ts&quot; x=&quot;196&quot; y=&quot;289&quot; text-anchor=&quot;middle&quot; dominant-baseline=&quot;central&quot;&gt;see data&lt;/text&gt;
+          &lt;/g&gt;
+          &lt;g class=&quot;node c-coral&quot; onclick=&quot;showDetail(&#x27;record&#x27;,this)&quot;&gt;
+            &lt;rect x=&quot;340&quot; y=&quot;248&quot; width=&quot;204&quot; height=&quot;56&quot; rx=&quot;10&quot; stroke-width=&quot;0.75&quot;/&gt;
+            &lt;text class=&quot;th&quot; x=&quot;442&quot; y=&quot;270&quot; text-anchor=&quot;middle&quot; dominant-baseline=&quot;central&quot;&gt;record an event&lt;/text&gt;
+            &lt;text class=&quot;ts&quot; x=&quot;442&quot; y=&quot;289&quot; text-anchor=&quot;middle&quot; dominant-baseline=&quot;central&quot;&gt;append a fact&lt;/text&gt;
+          &lt;/g&gt;
+        &lt;/svg&gt;
+      &lt;/div&gt;
+      &lt;div class=&quot;notes&quot;&gt;
+        &lt;div class=&quot;nh&quot;&gt;The argument &amp;amp; the open threads&lt;/div&gt;
+        &lt;div class=&quot;item&quot;&gt;— &lt;b&gt;The populate tier is the point.&lt;/b&gt; A two-box admin/consumer split erases &lt;em&gt;add an entity&lt;/em&gt;. A regional manager creating schools and users, a form editor authoring instruments — they live in a middle that model can&#x27;t express.&lt;/div&gt;
+        &lt;div class=&quot;item&quot;&gt;— &lt;b&gt;Read isn&#x27;t monolithic.&lt;/b&gt; It splits by entity-vs-usage (the nouns vs the activity recorded against them), by entity type (read schools ≠ read users), and by drill-depth (aggregate always; individual gated by access; own always). The Fellow and Head-of-Section cases are instances.&lt;/div&gt;
+        &lt;div class=&quot;item&quot;&gt;— &lt;b&gt;Editing folds in (confirmed).&lt;/b&gt; Engineering confirmed it: an edit emits an immutable event (the source of truth) and also updates a local projection — a rebuildable cache the UI reads for speed. So editing = record an event; no fifth verb.&lt;/div&gt;
+        &lt;div class=&quot;item&quot;&gt;— &lt;b&gt;Grant / assign / delegate — open.&lt;/b&gt; Giving &lt;em&gt;others&lt;/em&gt; access (assign a role, delegate a school off-tree) is a distinct power not yet placed among the four. The assignment question and delegation both live here.&lt;/div&gt;
+        &lt;div class=&quot;item&quot;&gt;— &lt;b&gt;Verbs fixed, nouns configurable.&lt;/b&gt; Read / record / add / define are universal; which entity types they act on is per-org — the same shape as configurable hierarchies.&lt;/div&gt;
+        &lt;div class=&quot;item&quot;&gt;— &lt;b&gt;A lens first.&lt;/b&gt; This is a way to reason about privilege. Whether these actions become first-class system primitives is the open scope-primitive decision.&lt;/div&gt;
+        &lt;div class=&quot;item&quot;&gt;— &lt;b&gt;&quot;Activity&quot; and &quot;plugin&quot; — likely one thing.&lt;/b&gt; Product&#x27;s &quot;activity&quot; (a reusable bundle for a job) and engineering&#x27;s &quot;plugin&quot; (a configurable feature component) appear to be the same construct named from two sides. Treated as one, pending final confirmation.&lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+
+    &lt;div&gt;
+      &lt;div id=&quot;panel&quot;&gt;
+        &lt;div class=&quot;ph&quot;&gt;&lt;span style=&quot;font-size:20px&quot;&gt;&amp;larr;&lt;/span&gt;Click an action to read what it is, who does it, and which tier it sits in.&lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+
+  &lt;footer&gt;
+    &lt;span&gt;Trellis Enterprise Platform — access model&lt;/span&gt;
+    &lt;span&gt;Product · Jul 2026&lt;/span&gt;
+  &lt;/footer&gt;
+&lt;/div&gt;
+
+&lt;script&gt;
+  var DETAIL={
+    read:{name:&quot;Read — see data (consume)&quot;,html:&quot;&lt;p&gt;The consumer floor: a teacher reads lesson plans, a supervisor reads dashboards. But read isn&#x27;t one atom — it splits three ways: &lt;em&gt;entity vs usage&lt;/em&gt; (reading the nouns and structure vs the activity recorded against them), by &lt;em&gt;entity type&lt;/em&gt; (read schools is not read users), and by &lt;em&gt;drill-depth&lt;/em&gt; (aggregate always; individual gated by access; own always).&lt;/p&gt;&lt;div class=&#x27;info-flag&#x27;&gt;&lt;strong&gt;This is where Fellow and Head of Section live:&lt;/strong&gt; same reach, different read. A Fellow reads schools but not user data; an HoS reads government users only. Read is the axis that separates them.&lt;/div&gt;&quot;},
+    record:{name:&quot;Record an event — append a fact (consume)&quot;,html:&quot;&lt;p&gt;Add a fact without overwriting anything: attendance, lesson completion, an observation, a coaching session. The system prefers appending events over mutating state — which is why this is a first-class verb, not a footnote under read.&lt;/p&gt;&lt;div class=&#x27;info-flag&#x27;&gt;&lt;strong&gt;Confirmed with engineering:&lt;/strong&gt; an edit emits an immutable event (the source of truth) and also updates a local projection — a transient, rebuildable cache the UI reads for speed. So editing folds in here; only the event is canonical, and there&#x27;s no fifth verb.&lt;/div&gt;&quot;},
+    add:{name:&quot;Add an entity — create a noun (populate)&quot;,html:&quot;&lt;p&gt;Create a thing: a school, a user, a form. This is the &lt;em&gt;missing middle&lt;/em&gt; — a regional manager creating schools and users, a form editor authoring instruments. Neither a pure consumer nor a full admin.&lt;/p&gt;&lt;div class=&#x27;info-flag&#x27;&gt;&lt;strong&gt;The grammar&#x27;s whole contribution:&lt;/strong&gt; a two-box admin/consumer model has nowhere to put this. The RM and the form editor fall through the gap. Naming the populate tier is what the grammar is for.&lt;/div&gt;&quot;},
+    define:{name:&quot;Define entity types — change the structure (admin)&quot;,html:&quot;&lt;p&gt;Change what entity types exist and their shape — the schema. The admin power: rare, and able to reshape everything downstream. The top of the privilege ladder, and the one to guard hardest.&lt;/p&gt;&quot;}
+  };
+  function showDetail(key,el){
+    document.querySelectorAll(&#x27;.node&#x27;).forEach(function(n){n.classList.remove(&#x27;active&#x27;)});
+    if(el) el.classList.add(&#x27;active&#x27;);
+    var d=DETAIL[key];
+    document.getElementById(&#x27;panel&#x27;).innerHTML=&#x27;&lt;span class=&quot;ptag&quot;&gt;action&lt;/span&gt;&lt;h3&gt;&#x27;+d.name+&#x27;&lt;/h3&gt;&#x27;+d.html;
+  }
+&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+"></iframe>
+    <iframe data-i="4" sandbox="allow-scripts" srcdoc="&lt;!DOCTYPE html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;head&gt;
+&lt;meta charset=&quot;UTF-8&quot;&gt;
+&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1.0&quot;&gt;
+&lt;title&gt;Access model — role composition prototype&lt;/title&gt;
+&lt;style&gt;
+  :root{
+    --bg:#e9e7e2; --ink:#1d2733; --muted:#6b7685; --line:#d9d5cd;
+    --card:#ffffff; --shell:#0f3b40; --shell-ink:#cfe6e4; --shell-active:#eafc6f;
+    --accent:#2f6b70; --orange:#e08a3c; --indigo:#3b3f8f; --plum:#7a2f6b; --violet:#6d34b0; --green:#2f9e6b;
+    --note:#b4472e; --shared:#c98a1a;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:#33383f;font-family:&#x27;Segoe UI&#x27;,system-ui,-apple-system,sans-serif;color:var(--ink);min-height:100vh}
+  /* ---------- top deliverable bar ---------- */
+  .topbar{position:sticky;top:0;z-index:100;background:#23272d;border-bottom:1px solid #3a3f47;padding:12px 20px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .topbar .ttl{color:#fff;font-size:14px;font-weight:700;margin-right:8px}
+  .topbar .tabbtn{background:#2f343b;border:1px solid #3f454e;color:#c7cdd4;border-radius:9px;padding:9px 14px;font-size:13px;font-weight:600;cursor:pointer}
+  .topbar .tabbtn.on{background:var(--shell);border-color:var(--shell-active);color:#fff}
+  .topbar .spacer{flex:1}
+  .topbar .annot{background:#2f343b;border:1px solid #3f454e;color:#c7cdd4;border-radius:9px;padding:9px 13px;font-size:12.5px;cursor:pointer}
+  .topbar .annot.on{border-color:var(--shell-active);color:#fff}
+  /* ---------- stage ---------- */
+  .tabpanel{display:none}
+  .tabpanel.active{display:block}
+  .stage{display:flex;gap:34px;align-items:flex-start;justify-content:center;padding:30px 20px 70px;flex-wrap:wrap}
+  /* ---------- device ---------- */
+  .device{width:392px;height:812px;background:#0b0b0d;border-radius:46px;border:8px solid #26262a;box-shadow:0 30px 70px rgba(0,0,0,.55);position:relative;overflow:hidden;flex-shrink:0}
+  .device::before{content:&#x27;&#x27;;position:absolute;top:0;left:50%;transform:translateX(-50%);width:120px;height:26px;background:#0b0b0d;border-radius:0 0 16px 16px;z-index:60}
+  .screen{position:absolute;inset:0;border-radius:38px;background:var(--bg);overflow:hidden}
+  .view{position:absolute;inset:0;display:none;flex-direction:column}
+  .view.active{display:flex}
+  .appbar{padding:46px 20px 14px;display:flex;align-items:center;gap:12px;background:var(--card);border-bottom:1px solid var(--line)}
+  .appbar .who{flex:1}.appbar .hi{font-size:17px;font-weight:700}.appbar .sub{font-size:12px;color:var(--muted);margin-top:2px}
+  .avatar{width:38px;height:38px;border-radius:50%;background:var(--shell);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px}
+  .body{flex:1;overflow-y:auto;padding:16px 16px 88px}
+  .body::-webkit-scrollbar{width:0}
+  .lead{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin:2px 2px 10px}
+  .tile{display:flex;align-items:center;gap:14px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:12px;cursor:pointer;transition:transform .12s,box-shadow .12s;position:relative}
+  .tile:active{transform:scale(.99)}.tile:hover{box-shadow:0 4px 14px rgba(0,0,0,.06)}
+  .tile .ic{width:46px;height:46px;border-radius:13px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:22px}
+  .tile .tt{flex:1}.tile .tt b{font-size:15.5px;display:block}.tile .tt span{font-size:12px;color:var(--muted)}
+  .tile .chev{color:var(--muted);font-size:20px}
+  .ic.teal{background:#e0efee;color:var(--accent)}.ic.plum{background:#f3e4ef;color:var(--plum)}.ic.amber{background:#f6ecd8;color:#b07d1e}
+  .shared-badge{position:absolute;top:10px;right:12px;background:var(--shared);color:#fff;font-size:9px;font-weight:700;letter-spacing:.4px;padding:2px 7px;border-radius:10px}
+  .kite{font-size:11px;color:var(--muted);text-align:center;margin:2px 0 14px;line-height:1.5}
+  .cgrid{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-bottom:6px}
+  .ccard{background:var(--card);border:1px solid var(--line);border-radius:15px;padding:12px;cursor:pointer;transition:transform .12s}
+  .ccard:active{transform:scale(.98)}
+  .ccard .cl{width:100%;height:56px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-weight:700;color:#5f5964;font-size:17px;margin-bottom:9px}
+  .ccard b{font-size:13px;display:block}.ccard span{font-size:11px;color:var(--muted)}
+  .c-a{background:#efe1ee}.c-b{background:#e6e6f4}
+  .row{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--line);border-radius:13px;padding:13px 14px;margin-bottom:9px;cursor:pointer}
+  .row .rl{flex:1}.row .rl b{font-size:14px;display:block}.row .rl span{font-size:11.5px;color:var(--muted)}
+  .row .rc{width:34px;height:34px;border-radius:9px;background:#eceae4;display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--accent);font-size:13px}
+  .row .chev{color:var(--muted)}
+  .row.flag{border-color:#e6c9a8;background:#fbf3e8}
+  .grouplbl{font-size:12.5px;font-weight:700;margin:14px 2px 8px;color:var(--ink)}
+  .lesson{border-radius:14px;padding:14px 16px;color:#fff;display:flex;align-items:center;gap:12px;margin-bottom:9px}
+  .lesson b{flex:1;font-size:15px}.lesson small{display:block;font-weight:400;opacity:.85;font-size:11.5px;margin-top:3px}
+  .lesson .lic{width:30px;height:30px;border-radius:8px;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:15px}
+  .lesson .rad{width:20px;height:20px;border-radius:50%;border:2px solid rgba(255,255,255,.6);flex-shrink:0}
+  .lesson.done .rad{background:var(--green);border-color:var(--green)}.lesson.done .rad::after{content:&#x27;✓&#x27;;color:#fff;font-size:12px}
+  .l-assess{background:var(--orange)}.l-math{background:var(--indigo)}.l-lang{background:var(--plum)}.l-att{background:var(--violet)}
+  .dash{background:var(--card);border:1px solid var(--line);border-radius:15px;padding:15px;margin-bottom:12px}
+  .dash h4{font-size:14px;margin-bottom:3px}
+  .dash .scope{font-size:11px;color:var(--accent);font-weight:600;margin-bottom:11px}
+  .scopepick{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;color:var(--accent);background:#e6efee;border:1px solid #cfe0df;border-radius:8px;padding:4px 9px;margin-bottom:11px}
+  .mini-legend{display:flex;gap:12px;font-size:10px;color:var(--muted);margin-bottom:10px;flex-wrap:wrap}
+  .mini-legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px;vertical-align:middle}
+  .mbars{display:flex;align-items:flex-end;gap:18px;height:96px;padding:0 8px}
+  .mbars .mb{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%}
+  .mbars .mb b{font-size:12px;margin-bottom:4px}
+  .mbars .mb .col{width:100%;border-radius:4px 4px 0 0}
+  .mbars .mb span{font-size:9px;color:var(--muted);margin-top:6px;text-align:center;line-height:1.2}
+  .mtable{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--card);margin-bottom:6px}
+  .mtable .mh,.mtable .mr{display:grid;grid-template-columns:1fr 44px 44px}
+  .mtable .mh{background:#f4f2ec;font-size:9.5px;font-weight:700;color:var(--muted);letter-spacing:.4px}
+  .mtable .mh div{padding:8px 10px}.mtable .mh .ce{text-align:center}
+  .mtable .mr{border-top:1px solid var(--line);font-size:12px;align-items:stretch}
+  .mtable .mr .nm{padding:9px 10px;display:flex;align-items:center}
+  .mtable .mr .cell{display:flex;align-items:center;justify-content:center;font-weight:600;font-size:11px}
+  .cell.rd{background:#f4c3c0}.cell.am{background:#f6ddb4}.cell.gr{background:#bfe3b6}
+  .mtable .mr.top .nm{font-weight:700}
+  .opts{display:flex;gap:7px;flex-wrap:wrap;margin:2px 0 8px}
+  .opt{border:1px solid var(--line);background:var(--card);border-radius:8px;padding:7px 11px;font-size:12px;color:var(--ink)}
+  .opt.sel{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .qlabel{font-size:12.5px;font-weight:600;color:var(--ink);margin:12px 2px 6px}
+  .qviz{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:14px;margin-bottom:11px}
+  .qviz .qt{font-size:12.5px;font-weight:600;margin-bottom:10px}
+  .hbar{display:flex;align-items:center;gap:8px;margin-bottom:7px;font-size:11px}
+  .hbar .hl{width:82px;color:var(--muted);flex-shrink:0}
+  .hbar .track{flex:1;background:#ece9e2;border-radius:5px;height:15px;overflow:hidden}
+  .hbar .fill{display:block;height:100%;background:var(--accent);border-radius:5px}
+  .hbar .hv{width:30px;text-align:right;color:var(--muted);flex-shrink:0}
+  .hbar.drill{cursor:pointer}
+  .hbar.drill .hv{color:var(--accent);font-weight:700;width:34px}
+  .drillpanel{display:none;margin:0 0 9px;padding:9px 10px;background:#fbf3e8;border:1px solid #eddcc4;border-radius:10px}
+  .drillpanel.open{display:block}
+  .note-sm{font-size:10.5px;color:var(--muted);margin-top:5px}
+  .bars{display:flex;align-items:flex-end;gap:7px;height:64px}
+  .bars i{flex:1;background:linear-gradient(var(--accent),#7cb4b3);border-radius:4px 4px 0 0;display:block}
+  .donut{width:70px;height:70px;border-radius:50%;background:conic-gradient(var(--accent) 0 72%,#e3e0d8 0 100%);display:flex;align-items:center;justify-content:center;margin:4px auto}
+  .donut span{width:46px;height:46px;border-radius:50%;background:var(--card);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px}
+  .subrow{display:flex;align-items:center;gap:10px;padding:11px 4px;border-bottom:1px solid var(--line)}
+  .subrow .av{width:30px;height:30px;border-radius:50%;background:#eceae4;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--accent)}
+  .subrow .sl{flex:1}.subrow .sl b{font-size:13px;display:block}.subrow .sl span{font-size:11px;color:var(--muted)}
+  .subrow.hl{background:#fbf3e8;border-radius:10px;border-bottom:none;padding:11px 10px}
+  .subrow .amina-tag{background:var(--shared);color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:8px}
+  .field{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:13px 14px;margin-bottom:10px;font-size:13.5px;color:var(--muted)}
+  .field b{color:var(--ink);display:block;font-size:12px;margin-bottom:5px;font-weight:600}
+  .btn{background:var(--shell);color:#fff;border:none;border-radius:12px;padding:14px;width:100%;font-size:14.5px;font-weight:600;cursor:pointer;margin-top:4px}
+  .empty{text-align:center;color:var(--muted);font-size:13px;padding:34px 20px;line-height:1.6}
+  .actbar{background:var(--card);padding:44px 14px 0;border-bottom:1px solid var(--line)}
+  .crumb{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted);margin-bottom:12px}
+  .crumb .bk{cursor:pointer;color:var(--accent);font-weight:600}.crumb b{color:var(--ink)}
+  .tabs{display:flex;gap:4px}
+  .tab{flex:1;text-align:center;padding:11px 4px;font-size:13px;font-weight:600;color:var(--muted);border-bottom:2.5px solid transparent;cursor:pointer}
+  .tab.on{color:var(--accent);border-bottom-color:var(--accent)}
+  .pane{display:none}.pane.on{display:block}
+  .shell{position:absolute;left:0;right:0;bottom:0;z-index:50;display:flex;background:var(--shell);padding:9px 6px 16px;border-top:1px solid rgba(255,255,255,.08)}
+  .shell button{flex:1;background:none;border:none;color:var(--shell-ink);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:10.5px;opacity:.7;padding:4px 0}
+  .shell button.on{opacity:1;color:var(--shell-active)}
+  .shell .gl{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:2}
+  .tagwrap{position:absolute;z-index:55;display:none}
+  /* on-screen tags removed — the notes panel carries the annotation */
+  .tagpill{background:var(--note);color:#fff;font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.3)}
+  .t-shell{bottom:14px;left:50%;transform:translateX(-50%)}
+  .t-home{top:150px;right:14px}.t-tabs{top:150px;left:50%;transform:translateX(-50%)}
+  /* notes */
+  .notes{width:340px;flex-shrink:0;color:#e8e6e1;padding-top:8px}
+  .notes h2{font-size:15px;font-weight:700;margin-bottom:4px;color:#fff}
+  .notes .thesis{font-size:12.5px;color:#a9b6b4;line-height:1.55;margin-bottom:16px;border-left:2px solid var(--shell-active);padding-left:12px}
+  .notes .card{background:#2b2f35;border:1px solid #3a3f47;border-radius:13px;padding:14px 15px;margin-bottom:12px}
+  .notes .card .lbl{font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--shell-active);font-weight:700;margin-bottom:6px}
+  .notes .card p{font-size:13px;line-height:1.55;color:#d7dbe0}
+  .notes .legend{font-size:11.5px;color:#8b959f;line-height:1.7}.notes .legend b{color:#c7cdd4}
+  @media(max-width:820px){.notes{width:392px}}
+&lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+
+&lt;div class=&quot;topbar&quot;&gt;
+  &lt;span class=&quot;ttl&quot;&gt;Access model — how a role is composed&lt;/span&gt;
+  &lt;button class=&quot;tabbtn on&quot; data-p=&quot;amina&quot; onclick=&quot;showTab(&#x27;amina&#x27;,this)&quot;&gt;Head teacher — Amina&lt;/button&gt;
+  &lt;button class=&quot;tabbtn&quot; data-p=&quot;qao&quot; onclick=&quot;showTab(&#x27;qao&#x27;,this)&quot;&gt;QAO — Teacher Supervisor&lt;/button&gt;
+  &lt;span class=&quot;spacer&quot;&gt;&lt;/span&gt;
+&lt;/div&gt;
+
+&lt;!-- ============================================================= AMINA ============================================================= --&gt;
+&lt;div class=&quot;tabpanel active&quot; data-persona=&quot;amina&quot;&gt;
+&lt;div class=&quot;stage&quot;&gt;
+  &lt;div class=&quot;device&quot;&gt;&lt;div class=&quot;screen&quot;&gt;
+
+    &lt;div class=&quot;view active&quot; data-screen=&quot;home&quot;&gt;
+      &lt;div class=&quot;appbar&quot;&gt;&lt;div class=&quot;avatar&quot;&gt;A&lt;/div&gt;&lt;div class=&quot;who&quot;&gt;&lt;div class=&quot;hi&quot;&gt;Hi, Amina&lt;/div&gt;&lt;div class=&quot;sub&quot;&gt;Head teacher · Danja Model Primary&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;
+      &lt;div class=&quot;body&quot;&gt;
+        &lt;div class=&quot;lead&quot;&gt;Today&lt;/div&gt;
+        &lt;div class=&quot;tile&quot; onclick=&quot;go(this,&#x27;teach-pick&#x27;)&quot;&gt;&lt;div class=&quot;ic teal&quot;&gt;📚&lt;/div&gt;&lt;div class=&quot;tt&quot;&gt;&lt;b&gt;Teach a class&lt;/b&gt;&lt;span&gt;Cover a class · lessons, attendance, progress&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;chev&quot;&gt;›&lt;/div&gt;&lt;/div&gt;
+        &lt;div class=&quot;tile&quot; onclick=&quot;go(this,&#x27;obs-pick&#x27;)&quot;&gt;&lt;div class=&quot;shared-badge&quot;&gt;SHARED&lt;/div&gt;&lt;div class=&quot;ic plum&quot;&gt;🔎&lt;/div&gt;&lt;div class=&quot;tt&quot;&gt;&lt;b&gt;Lesson observation&lt;/b&gt;&lt;span&gt;Observe a class · tool, lesson, reports&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;chev&quot;&gt;›&lt;/div&gt;&lt;/div&gt;
+        &lt;div class=&quot;kite&quot;&gt;One role · one school. A teacher activity and a Teacher-Supervisor activity in one home — same scope, so they merge.&lt;/div&gt;
+      &lt;/div&gt;
+      &lt;div class=&quot;tagwrap t-home&quot;&gt;&lt;div class=&quot;tagpill&quot;&gt;Home = activities composed into one experience&lt;/div&gt;&lt;/div&gt;
+    &lt;/div&gt;
+
+    &lt;div class=&quot;view&quot; data-screen=&quot;teach-pick&quot;&gt;
+      &lt;div class=&quot;appbar&quot;&gt;&lt;div class=&quot;avatar&quot;&gt;A&lt;/div&gt;&lt;div class=&quot;who&quot;&gt;&lt;div class=&quot;hi&quot;&gt;Teach a class&lt;/div&gt;&lt;div class=&quot;sub&quot;&gt;Pick the class you&#x27;re covering&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;
+      &lt;div class=&quot;body&quot;&gt;
+        &lt;div class=&quot;lead&quot;&gt;Danja Model Primary · classes&lt;/div&gt;
+        &lt;div class=&quot;cgrid&quot;&gt;
+          &lt;div class=&quot;ccard&quot; onclick=&quot;go(this,&#x27;teach&#x27;)&quot;&gt;&lt;div class=&quot;cl c-a&quot;&gt;PP1&lt;/div&gt;&lt;b&gt;PP1 — Morning&lt;/b&gt;&lt;span&gt;Bala Ibrahim · 28&lt;/span&gt;&lt;/div&gt;
+          &lt;div class=&quot;ccard&quot; onclick=&quot;go(this,&#x27;teach&#x27;)&quot;&gt;&lt;div class=&quot;cl c-b&quot;&gt;PP2&lt;/div&gt;&lt;b&gt;PP2 — Morning&lt;/b&gt;&lt;span&gt;Bernard Makori · 31&lt;/span&gt;&lt;/div&gt;
+          &lt;div class=&quot;ccard&quot; onclick=&quot;go(this,&#x27;teach&#x27;)&quot;&gt;&lt;div class=&quot;cl c-a&quot;&gt;G1&lt;/div&gt;&lt;b&gt;Grade 1 — Blue&lt;/b&gt;&lt;span&gt;Grace Nwosu · 35&lt;/span&gt;&lt;/div&gt;
+          &lt;div class=&quot;ccard&quot; onclick=&quot;go(this,&#x27;teach&#x27;)&quot;&gt;&lt;div class=&quot;cl c-b&quot;&gt;G2&lt;/div&gt;&lt;b&gt;Grade 2 — Red&lt;/b&gt;&lt;span&gt;Joshua Sani · 33&lt;/span&gt;&lt;/div&gt;
+        &lt;/div&gt;
+        &lt;div class=&quot;kite&quot;&gt;The real class screen also has &lt;b&gt;Add&lt;/b&gt;, &lt;b&gt;Edit&lt;/b&gt; and &lt;b&gt;Restore&lt;/b&gt; — define/manage powers. Covering a class needs only &lt;b&gt;Select&lt;/b&gt;, so this activity omits them.&lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+
+    &lt;div class=&quot;view&quot; data-screen=&quot;teach&quot;&gt;
+      &lt;div class=&quot;actbar&quot;&gt;&lt;div class=&quot;crumb&quot;&gt;&lt;span class=&quot;bk&quot; onclick=&quot;go(this,&#x27;teach-pick&#x27;)&quot;&gt;‹ Classes&lt;/span&gt; &lt;span&gt;›&lt;/span&gt; &lt;b&gt;PP2&lt;/b&gt;&lt;/div&gt;
+        &lt;div class=&quot;tabs&quot;&gt;&lt;div class=&quot;tab on&quot; onclick=&quot;tab(this,&#x27;teach&#x27;)&quot;&gt;Teach&lt;/div&gt;&lt;div class=&quot;tab&quot; onclick=&quot;tab(this,&#x27;learners&#x27;)&quot;&gt;Learners&lt;/div&gt;&lt;div class=&quot;tab&quot; onclick=&quot;tab(this,&#x27;progress&#x27;)&quot;&gt;Progress&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;
+      &lt;div class=&quot;body&quot;&gt;
+        &lt;div class=&quot;pane on&quot; data-p=&quot;teach&quot;&gt;
+          &lt;div class=&quot;grouplbl&quot;&gt;Daily&lt;/div&gt;&lt;div class=&quot;lesson l-assess&quot;&gt;&lt;div class=&quot;rad&quot;&gt;&lt;/div&gt;&lt;b&gt;Assessment&lt;/b&gt;&lt;div class=&quot;lic&quot;&gt;🏆&lt;/div&gt;&lt;/div&gt;
+          &lt;div class=&quot;grouplbl&quot;&gt;Mathematics&lt;/div&gt;&lt;div class=&quot;lesson l-math&quot;&gt;&lt;div class=&quot;rad&quot;&gt;&lt;/div&gt;&lt;b&gt;Mathematics&lt;small&gt;Week 1 · Day 1&lt;/small&gt;&lt;/b&gt;&lt;div class=&quot;lic&quot;&gt;🔢&lt;/div&gt;&lt;/div&gt;
+          &lt;div class=&quot;grouplbl&quot;&gt;Language&lt;/div&gt;&lt;div class=&quot;lesson l-lang&quot;&gt;&lt;div class=&quot;rad&quot;&gt;&lt;/div&gt;&lt;b&gt;Language&lt;small&gt;Week 1 · Day 1&lt;/small&gt;&lt;/b&gt;&lt;div class=&quot;lic&quot;&gt;🔤&lt;/div&gt;&lt;/div&gt;
+          &lt;div class=&quot;grouplbl&quot;&gt;Daily attendance&lt;/div&gt;&lt;div class=&quot;lesson l-att done&quot;&gt;&lt;div class=&quot;rad&quot;&gt;&lt;/div&gt;&lt;b&gt;Attendance&lt;small&gt;Class attendance register&lt;/small&gt;&lt;/b&gt;&lt;div class=&quot;lic&quot;&gt;📅&lt;/div&gt;&lt;/div&gt;
+        &lt;/div&gt;
+        &lt;div class=&quot;pane&quot; data-p=&quot;learners&quot;&gt;
+          &lt;div class=&quot;lead&quot;&gt;PP2 · 31 learners&lt;/div&gt;
+          &lt;div class=&quot;row&quot;&gt;&lt;div class=&quot;rc&quot;&gt;AB&lt;/div&gt;&lt;div class=&quot;rl&quot;&gt;&lt;b&gt;Amina Bello&lt;/b&gt;&lt;span&gt;Present today&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;
+          &lt;div class=&quot;row&quot;&gt;&lt;div class=&quot;rc&quot;&gt;CD&lt;/div&gt;&lt;div class=&quot;rl&quot;&gt;&lt;b&gt;Chidi Okeke&lt;/b&gt;&lt;span&gt;Present today&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;
+          &lt;div class=&quot;row&quot;&gt;&lt;div class=&quot;rc&quot;&gt;FG&lt;/div&gt;&lt;div class=&quot;rl&quot;&gt;&lt;b&gt;Fatima Garba&lt;/b&gt;&lt;span&gt;Absent today&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;
+          &lt;div class=&quot;kite&quot;&gt;The class she selected — nothing beyond it.&lt;/div&gt;
+        &lt;/div&gt;
+        &lt;div class=&quot;pane&quot; data-p=&quot;progress&quot;&gt;
+          &lt;div class=&quot;dash&quot;&gt;&lt;h4&gt;Learner progress&lt;/h4&gt;&lt;div class=&quot;scope&quot;&gt;Scope: PP2 only&lt;/div&gt;
+            &lt;div class=&quot;bars&quot;&gt;&lt;i style=&quot;height:40%&quot;&gt;&lt;/i&gt;&lt;i style=&quot;height:62%&quot;&gt;&lt;/i&gt;&lt;i style=&quot;height:55%&quot;&gt;&lt;/i&gt;&lt;i style=&quot;height:78%&quot;&gt;&lt;/i&gt;&lt;i style=&quot;height:48%&quot;&gt;&lt;/i&gt;&lt;i style=&quot;height:70%&quot;&gt;&lt;/i&gt;&lt;/div&gt;&lt;/div&gt;
+          &lt;div class=&quot;kite&quot;&gt;Same progress tool as in Insights — here a &lt;b&gt;selector&lt;/b&gt; filters it to this one class. Her access scope hasn&#x27;t changed.&lt;/div&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+      &lt;div class=&quot;tagwrap t-tabs&quot;&gt;&lt;div class=&quot;tagpill&quot;&gt;Activity brings its own TOP tabs — shell stays below&lt;/div&gt;&lt;/div&gt;
+    &lt;/div&gt;
+
+    &lt;div class=&quot;view&quot; data-screen=&quot;obs-pick&quot;&gt;
+      &lt;div class=&quot;appbar&quot;&gt;&lt;div class=&quot;avatar&quot;&gt;A&lt;/div&gt;&lt;div class=&quot;who&quot;&gt;&lt;div class=&quot;hi&quot;&gt;Lesson observation&lt;/div&gt;&lt;div class=&quot;sub&quot;&gt;Which class are you observing?&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;
+      &lt;div class=&quot;body&quot;&gt;
+        &lt;div class=&quot;lead&quot;&gt;Danja Model Primary · classes&lt;/div&gt;
+        &lt;div class=&quot;row&quot; onclick=&quot;go(this,&#x27;obs&#x27;)&quot;&gt;&lt;div class=&quot;rc&quot;&gt;P2&lt;/div&gt;&lt;div class=&quot;rl&quot;&gt;&lt;b&gt;Primary 2 · A&lt;/b&gt;&lt;span&gt;Bernard Makori teaching&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;chev&quot;&gt;›&lt;/div&gt;&lt;/div&gt;
+        &lt;div class=&quot;row&quot; onclick=&quot;go(this,&#x27;obs&#x27;)&quot;&gt;&lt;div class=&quot;rc&quot;&gt;P1&lt;/div&gt;&lt;div class=&quot;rl&quot;&gt;&lt;b&gt;Primary 1 · B&lt;/b&gt;&lt;span&gt;Grace Nwosu teaching&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;chev&quot;&gt;›&lt;/div&gt;&lt;/div&gt;
+        &lt;div class=&quot;kite&quot;&gt;The lesson observation is on a &lt;b&gt;class&lt;/b&gt; in her school. The teacher shows up inside the form; the class is what it&#x27;s recorded against — so it scopes up the org path like everything else.&lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+
+    &lt;div class=&quot;view&quot; data-screen=&quot;obs&quot;&gt;
+      &lt;div class=&quot;actbar&quot;&gt;&lt;div class=&quot;crumb&quot;&gt;&lt;span class=&quot;bk&quot; onclick=&quot;go(this,&#x27;obs-pick&#x27;)&quot;&gt;‹ Classes&lt;/span&gt; &lt;span&gt;›&lt;/span&gt; &lt;b&gt;Primary 2 · A&lt;/b&gt;&lt;/div&gt;
+        &lt;div class=&quot;tabs&quot;&gt;&lt;div class=&quot;tab on&quot; onclick=&quot;tab(this,&#x27;observe&#x27;)&quot;&gt;Observation tool&lt;/div&gt;&lt;div class=&quot;tab&quot; onclick=&quot;tab(this,&#x27;lesson&#x27;)&quot;&gt;Lesson&lt;/div&gt;&lt;div class=&quot;tab&quot; onclick=&quot;tab(this,&#x27;reports&#x27;)&quot;&gt;Reports&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;
+      &lt;div class=&quot;body&quot;&gt;
+        &lt;div class=&quot;pane on&quot; data-p=&quot;observe&quot;&gt;
+          &lt;div class=&quot;field&quot;&gt;&lt;b&gt;Class&lt;/b&gt;Primary 2 · A — Bernard Makori&lt;/div&gt;
+          &lt;div class=&quot;field&quot;&gt;&lt;b&gt;Learners present&lt;/b&gt;Boys 14 · Girls 16&lt;/div&gt;
+          &lt;div class=&quot;qlabel&quot;&gt;What are you observing?&lt;/div&gt;
+          &lt;div class=&quot;opts&quot;&gt;&lt;span class=&quot;opt sel&quot;&gt;English — Let&#x27;s Read&lt;/span&gt;&lt;span class=&quot;opt&quot;&gt;Yoruba&lt;/span&gt;&lt;span class=&quot;opt&quot;&gt;DPL status&lt;/span&gt;&lt;/div&gt;
+          &lt;div class=&quot;qlabel&quot;&gt;Phonics — effectiveness (1–4)&lt;/div&gt;
+          &lt;div class=&quot;opts&quot;&gt;&lt;span class=&quot;opt&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;opt&quot;&gt;2&lt;/span&gt;&lt;span class=&quot;opt sel&quot;&gt;3&lt;/span&gt;&lt;span class=&quot;opt&quot;&gt;4&lt;/span&gt;&lt;/div&gt;
+          &lt;div class=&quot;qlabel&quot;&gt;Comprehension — effectiveness (1–4)&lt;/div&gt;
+          &lt;div class=&quot;opts&quot;&gt;&lt;span class=&quot;opt&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;opt sel&quot;&gt;2&lt;/span&gt;&lt;span class=&quot;opt&quot;&gt;3&lt;/span&gt;&lt;span class=&quot;opt&quot;&gt;4&lt;/span&gt;&lt;/div&gt;
+          &lt;div class=&quot;field&quot;&gt;&lt;b&gt;What did the teacher do well?&lt;/b&gt;Strengths…&lt;/div&gt;
+          &lt;div class=&quot;field&quot;&gt;&lt;b&gt;Areas to support&lt;/b&gt;Improvements…&lt;/div&gt;
+          &lt;button class=&quot;btn&quot;&gt;Save observation&lt;/button&gt;
+          &lt;div class=&quot;kite&quot;&gt;The shared lesson observation activity — the &lt;b&gt;same form the QAO uses&lt;/b&gt; (the QAO tab). Condensed from the real Let&#x27;s-Read observation.&lt;/div&gt;
+        &lt;/div&gt;
+        &lt;div class=&quot;pane&quot; data-p=&quot;reports&quot;&gt;
+          &lt;div class=&quot;lead&quot;&gt;Lesson observation reports · your classes&lt;/div&gt;
+          &lt;div class=&quot;qviz&quot;&gt;&lt;div class=&quot;qt&quot;&gt;What you observed&lt;/div&gt;
+            &lt;div class=&quot;hbar&quot;&gt;&lt;span class=&quot;hl&quot;&gt;English&lt;/span&gt;&lt;span class=&quot;track&quot;&gt;&lt;span class=&quot;fill&quot; style=&quot;width:70%&quot;&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;hv&quot;&gt;70%&lt;/span&gt;&lt;/div&gt;
+            &lt;div class=&quot;hbar&quot;&gt;&lt;span class=&quot;hl&quot;&gt;Yoruba&lt;/span&gt;&lt;span class=&quot;track&quot;&gt;&lt;span class=&quot;fill&quot; style=&quot;width:30%&quot;&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;hv&quot;&gt;30%&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;
+          &lt;div class=&quot;qviz&quot;&gt;&lt;div class=&quot;qt&quot;&gt;Phonics effectiveness (1–4)&lt;/div&gt;
+            &lt;div class=&quot;hbar&quot;&gt;&lt;span class=&quot;hl&quot;&gt;2&lt;/span&gt;&lt;span class=&quot;track&quot;&gt;&lt;span class=&quot;fill&quot; style=&quot;width:40%&quot;&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;hv&quot;&gt;40%&lt;/span&gt;&lt;/div&gt;
+            &lt;div class=&quot;hbar&quot;&gt;&lt;span class=&quot;hl&quot;&gt;3&lt;/span&gt;&lt;span class=&quot;track&quot;&gt;&lt;span class=&quot;fill&quot; style=&quot;width:60%&quot;&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;hv&quot;&gt;60%&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;
+          &lt;div class=&quot;kite&quot;&gt;Your own submissions, visualised — the &lt;b&gt;see-the-data&lt;/b&gt; side of the same form you fill in the Observation tool. The QAO&#x27;s zone Reports (the QAO tab) roll these up.&lt;/div&gt;
+        &lt;/div&gt;
+        &lt;div class=&quot;pane&quot; data-p=&quot;lesson&quot;&gt;
+          &lt;div class=&quot;grouplbl&quot;&gt;Lesson of the day&lt;/div&gt;
+          &lt;div class=&quot;lesson l-math&quot;&gt;&lt;div class=&quot;rad&quot;&gt;&lt;/div&gt;&lt;b&gt;Mathematics&lt;small&gt;Week 1 · Day 1 — what&#x27;s being taught&lt;/small&gt;&lt;/b&gt;&lt;div class=&quot;lic&quot;&gt;🔢&lt;/div&gt;&lt;/div&gt;
+          &lt;div class=&quot;kite&quot;&gt;Pulled from the teacher surface — context for the observation.&lt;/div&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+
+    &lt;div class=&quot;view&quot; data-screen=&quot;insights&quot;&gt;
+      &lt;div class=&quot;appbar&quot;&gt;&lt;div class=&quot;avatar&quot;&gt;A&lt;/div&gt;&lt;div class=&quot;who&quot;&gt;&lt;div class=&quot;hi&quot;&gt;Insights&lt;/div&gt;&lt;div class=&quot;sub&quot;&gt;Dashboards you can see&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;
+      &lt;div class=&quot;body&quot;&gt;
+        &lt;div class=&quot;dash&quot;&gt;&lt;h4&gt;Attendance&lt;/h4&gt;&lt;div class=&quot;scopepick&quot;&gt;🏫 Whole school ▾&lt;/div&gt;
+          &lt;div class=&quot;bars&quot;&gt;&lt;i style=&quot;height:70%&quot;&gt;&lt;/i&gt;&lt;i style=&quot;height:64%&quot;&gt;&lt;/i&gt;&lt;i style=&quot;height:80%&quot;&gt;&lt;/i&gt;&lt;i style=&quot;height:58%&quot;&gt;&lt;/i&gt;&lt;i style=&quot;height:74%&quot;&gt;&lt;/i&gt;&lt;/div&gt;&lt;/div&gt;
+        &lt;div class=&quot;dash&quot;&gt;&lt;h4&gt;Lesson completion&lt;/h4&gt;&lt;div class=&quot;scope&quot;&gt;Scope: whole school&lt;/div&gt;&lt;div class=&quot;donut&quot;&gt;&lt;span&gt;72%&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;
+        &lt;div class=&quot;dash&quot;&gt;&lt;h4&gt;Learner progress&lt;/h4&gt;&lt;div class=&quot;scope&quot;&gt;Scope: whole school&lt;/div&gt;
+          &lt;div class=&quot;bars&quot;&gt;&lt;i style=&quot;height:55%&quot;&gt;&lt;/i&gt;&lt;i style=&quot;height:72%&quot;&gt;&lt;/i&gt;&lt;i style=&quot;height:48%&quot;&gt;&lt;/i&gt;&lt;i style=&quot;height:66%&quot;&gt;&lt;/i&gt;&lt;/div&gt;&lt;/div&gt;
+        &lt;div class=&quot;kite&quot;&gt;Bounded by the active experience (her school). The attendance dashboard&#x27;s &lt;b&gt;selector&lt;/b&gt; (&quot;Whole school ▾&quot;) is the same control that scopes progress to one class inside an activity — one primitive, the selector moves.&lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+
+    &lt;div class=&quot;view&quot; data-screen=&quot;support&quot;&gt;
+      &lt;div class=&quot;appbar&quot;&gt;&lt;div class=&quot;avatar&quot;&gt;A&lt;/div&gt;&lt;div class=&quot;who&quot;&gt;&lt;div class=&quot;hi&quot;&gt;Support&lt;/div&gt;&lt;div class=&quot;sub&quot;&gt;Get help when something&#x27;s stuck&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;
+      &lt;div class=&quot;body&quot;&gt;&lt;div class=&quot;field&quot;&gt;&lt;b&gt;What&#x27;s happening?&lt;/b&gt;Describe the problem…&lt;/div&gt;&lt;div class=&quot;field&quot;&gt;&lt;b&gt;Which teacher / class?&lt;/b&gt;Optional&lt;/div&gt;&lt;button class=&quot;btn&quot;&gt;Send to support&lt;/button&gt;
+        &lt;div class=&quot;kite&quot;&gt;Common to every role. A form for now — later a chatbot or help articles.&lt;/div&gt;&lt;/div&gt;
+    &lt;/div&gt;
+
+    &lt;div class=&quot;view&quot; data-screen=&quot;profile&quot;&gt;
+      &lt;div class=&quot;appbar&quot;&gt;&lt;div class=&quot;avatar&quot;&gt;A&lt;/div&gt;&lt;div class=&quot;who&quot;&gt;&lt;div class=&quot;hi&quot;&gt;Amina Sani&lt;/div&gt;&lt;div class=&quot;sub&quot;&gt;Head teacher · Danja Model Primary&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;
+      &lt;div class=&quot;body&quot;&gt;&lt;div class=&quot;lead&quot;&gt;Your experience&lt;/div&gt;
+        &lt;div class=&quot;row&quot; style=&quot;cursor:default&quot;&gt;&lt;div class=&quot;rc&quot;&gt;HT&lt;/div&gt;&lt;div class=&quot;rl&quot;&gt;&lt;b&gt;Head teacher&lt;/b&gt;&lt;span&gt;Danja Model Primary · active&lt;/span&gt;&lt;/div&gt;&lt;div style=&quot;color:var(--green);font-weight:700&quot;&gt;✓&lt;/div&gt;&lt;/div&gt;
+        &lt;div class=&quot;empty&quot;&gt;Nothing to switch — one role, one scope.&lt;br&gt;A two-role user (e.g. teacher + ECDO) would see a switcher here, because their scopes differ.&lt;/div&gt;&lt;/div&gt;
+    &lt;/div&gt;
+
+    &lt;div class=&quot;shell&quot;&gt;
+      &lt;button class=&quot;on&quot; onclick=&quot;shellGo(this,&#x27;home&#x27;)&quot;&gt;&lt;svg class=&quot;gl&quot; viewBox=&quot;0 0 24 24&quot;&gt;&lt;path d=&quot;M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z&quot;/&gt;&lt;/svg&gt;Home&lt;/button&gt;
+      &lt;button onclick=&quot;shellGo(this,&#x27;insights&#x27;)&quot;&gt;&lt;svg class=&quot;gl&quot; viewBox=&quot;0 0 24 24&quot;&gt;&lt;line x1=&quot;6&quot; y1=&quot;20&quot; x2=&quot;6&quot; y2=&quot;13&quot;/&gt;&lt;line x1=&quot;12&quot; y1=&quot;20&quot; x2=&quot;12&quot; y2=&quot;4&quot;/&gt;&lt;line x1=&quot;18&quot; y1=&quot;20&quot; x2=&quot;18&quot; y2=&quot;9&quot;/&gt;&lt;/svg&gt;Insights&lt;/button&gt;
+      &lt;button onclick=&quot;shellGo(this,&#x27;support&#x27;)&quot;&gt;&lt;svg class=&quot;gl&quot; viewBox=&quot;0 0 24 24&quot;&gt;&lt;circle cx=&quot;12&quot; cy=&quot;12&quot; r=&quot;9&quot;/&gt;&lt;path d=&quot;M9.5 9a2.5 2.5 0 1 1 3 2.4c-.6.2-1 .8-1 1.6&quot;/&gt;&lt;/svg&gt;Support&lt;/button&gt;
+      &lt;button onclick=&quot;shellGo(this,&#x27;profile&#x27;)&quot;&gt;&lt;svg class=&quot;gl&quot; viewBox=&quot;0 0 24 24&quot;&gt;&lt;circle cx=&quot;12&quot; cy=&quot;8&quot; r=&quot;4&quot;/&gt;&lt;path d=&quot;M4 21v-1a6 6 0 0 1 12 0v1&quot;/&gt;&lt;/svg&gt;Profile&lt;/button&gt;
+    &lt;/div&gt;
+    &lt;div class=&quot;tagwrap t-shell&quot;&gt;&lt;div class=&quot;tagpill&quot;&gt;Shell — identical for every role&lt;/div&gt;&lt;/div&gt;
+  &lt;/div&gt;&lt;/div&gt;
+
+  &lt;div class=&quot;notes&quot;&gt;
+    &lt;h2&gt;Head teacher — Amina&lt;/h2&gt;
+    &lt;div class=&quot;thesis&quot;&gt;One role, one school, one scope. Her home is a &lt;b&gt;composition&lt;/b&gt; of a teacher activity and a Teacher-Supervisor activity — the merge case. Nothing to switch, because nothing changes scope.&lt;/div&gt;
+    &lt;div class=&quot;card&quot;&gt;&lt;div class=&quot;lbl&quot;&gt;This screen&lt;/div&gt;&lt;p class=&quot;noteText&quot;&gt;&lt;/p&gt;&lt;/div&gt;
+    &lt;div class=&quot;card&quot;&gt;&lt;div class=&quot;lbl&quot;&gt;Read it like this&lt;/div&gt;&lt;div class=&quot;legend&quot;&gt;
+      &lt;b&gt;Shell&lt;/b&gt; (bottom) — same for every role.&lt;br&gt;&lt;b&gt;Home&lt;/b&gt; — the activities that make up the role.&lt;br&gt;&lt;b&gt;Activity&lt;/b&gt; — own &lt;b&gt;top&lt;/b&gt; tabs; shell persists. Activities drill &lt;i&gt;within&lt;/i&gt; scope.&lt;br&gt;&lt;b&gt;Profile&lt;/b&gt; — where roles switch. Switching changes scope. Amina has one.&lt;/div&gt;&lt;/div&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;!-- ============================================================= QAO ============================================================= --&gt;
+&lt;div class=&quot;tabpanel&quot; data-persona=&quot;qao&quot;&gt;
+&lt;div class=&quot;stage&quot;&gt;
+  &lt;div class=&quot;device&quot;&gt;&lt;div class=&quot;screen&quot;&gt;
+
+    &lt;div class=&quot;view active&quot; data-screen=&quot;home&quot;&gt;
+      &lt;div class=&quot;appbar&quot;&gt;&lt;div class=&quot;avatar&quot;&gt;M&lt;/div&gt;&lt;div class=&quot;who&quot;&gt;&lt;div class=&quot;hi&quot;&gt;Hi, Musa&lt;/div&gt;&lt;div class=&quot;sub&quot;&gt;QAO · Danja zone · 22 schools&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;
+      &lt;div class=&quot;body&quot;&gt;
+        &lt;div class=&quot;lead&quot;&gt;Your work&lt;/div&gt;
+        &lt;div class=&quot;tile&quot; onclick=&quot;go(this,&#x27;plan&#x27;)&quot;&gt;&lt;div class=&quot;ic amber&quot;&gt;🗺️&lt;/div&gt;&lt;div class=&quot;tt&quot;&gt;&lt;b&gt;Plan &amp;amp; visit schools&lt;/b&gt;&lt;span&gt;Which schools need attention · planner&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;chev&quot;&gt;›&lt;/div&gt;&lt;/div&gt;
+        &lt;div class=&quot;tile&quot; onclick=&quot;go(this,&#x27;obs-pick&#x27;)&quot;&gt;&lt;div class=&quot;shared-badge&quot;&gt;SHARED&lt;/div&gt;&lt;div class=&quot;ic plum&quot;&gt;🔎&lt;/div&gt;&lt;div class=&quot;tt&quot;&gt;&lt;b&gt;Lesson observation&lt;/b&gt;&lt;span&gt;Observe classes across the zone&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;chev&quot;&gt;›&lt;/div&gt;&lt;/div&gt;
+        &lt;div class=&quot;tile&quot; onclick=&quot;go(this,&#x27;coach-pick&#x27;)&quot;&gt;&lt;div class=&quot;ic teal&quot;&gt;🎯&lt;/div&gt;&lt;div class=&quot;tt&quot;&gt;&lt;b&gt;Coaching&lt;/b&gt;&lt;span&gt;Coach head teachers &amp;amp; teachers&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;chev&quot;&gt;›&lt;/div&gt;&lt;/div&gt;
+        &lt;div class=&quot;kite&quot;&gt;One role · one zone. Some activities are the QAO&#x27;s own (visit, coach); &lt;b&gt;Lesson observation is the same activity Amina has&lt;/b&gt; — one rung up.&lt;/div&gt;
+      &lt;/div&gt;
+      &lt;div class=&quot;tagwrap t-home&quot;&gt;&lt;div class=&quot;tagpill&quot;&gt;Same shell · different activities&lt;/div&gt;&lt;/div&gt;
+    &lt;/div&gt;
+
+    &lt;!-- PLAN &amp; VISIT: dashboard lives inside the activity --&gt;
+    &lt;div class=&quot;view&quot; data-screen=&quot;plan&quot;&gt;
+      &lt;div class=&quot;actbar&quot;&gt;&lt;div class=&quot;crumb&quot;&gt;&lt;span class=&quot;bk&quot; onclick=&quot;shellGo2(this,&#x27;home&#x27;)&quot;&gt;‹ Home&lt;/span&gt; &lt;span&gt;›&lt;/span&gt; &lt;b&gt;Plan &amp;amp; visit&lt;/b&gt;&lt;/div&gt;
+        &lt;div class=&quot;tabs&quot;&gt;&lt;div class=&quot;tab on&quot; onclick=&quot;tab(this,&#x27;monitor&#x27;)&quot;&gt;School Monitor&lt;/div&gt;&lt;div class=&quot;tab&quot; onclick=&quot;tab(this,&#x27;planner&#x27;)&quot;&gt;Planner&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;
+      &lt;div class=&quot;body&quot;&gt;
+        &lt;div class=&quot;pane on&quot; data-p=&quot;monitor&quot;&gt;
+          &lt;div class=&quot;dash&quot;&gt;&lt;h4&gt;Overview — last 4 weeks&lt;/h4&gt;
+            &lt;div class=&quot;mini-legend&quot;&gt;&lt;span&gt;&lt;i style=&quot;background:#e08a8a&quot;&gt;&lt;/i&gt;% Low SP&lt;/span&gt;&lt;span&gt;&lt;i style=&quot;background:#ecd98a&quot;&gt;&lt;/i&gt;% Low DPL&lt;/span&gt;&lt;span&gt;&lt;i style=&quot;background:#9fd396&quot;&gt;&lt;/i&gt;% on Track&lt;/span&gt;&lt;/div&gt;
+            &lt;div class=&quot;mbars&quot;&gt;
+              &lt;div class=&quot;mb&quot;&gt;&lt;b&gt;68%&lt;/b&gt;&lt;div class=&quot;col&quot; style=&quot;height:68%;background:#ecd98a&quot;&gt;&lt;/div&gt;&lt;span&gt;% Low&lt;br&gt;DPL&lt;/span&gt;&lt;/div&gt;
+              &lt;div class=&quot;mb&quot;&gt;&lt;b&gt;82%&lt;/b&gt;&lt;div class=&quot;col&quot; style=&quot;height:82%;background:#e08a8a&quot;&gt;&lt;/div&gt;&lt;span&gt;% Low&lt;br&gt;SP&lt;/span&gt;&lt;/div&gt;
+              &lt;div class=&quot;mb&quot;&gt;&lt;b&gt;0%&lt;/b&gt;&lt;div class=&quot;col&quot; style=&quot;height:2%;background:#9fd396&quot;&gt;&lt;/div&gt;&lt;span&gt;% on&lt;br&gt;Track&lt;/span&gt;&lt;/div&gt;
+            &lt;/div&gt;
+          &lt;/div&gt;
+          &lt;div class=&quot;lead&quot;&gt;Schools by urgency — visit the top first&lt;/div&gt;
+          &lt;div class=&quot;mtable&quot;&gt;
+            &lt;div class=&quot;mh&quot;&gt;&lt;div&gt;School&lt;/div&gt;&lt;div class=&quot;ce&quot;&gt;DPL&lt;/div&gt;&lt;div class=&quot;ce&quot;&gt;LP&lt;/div&gt;&lt;/div&gt;
+            &lt;div class=&quot;mr top&quot;&gt;&lt;div class=&quot;nm&quot;&gt;Danja Model Primary&lt;/div&gt;&lt;div class=&quot;cell rd&quot;&gt;0%&lt;/div&gt;&lt;div class=&quot;cell rd&quot;&gt;0%&lt;/div&gt;&lt;/div&gt;
+            &lt;div class=&quot;mr&quot;&gt;&lt;div class=&quot;nm&quot;&gt;Kofar Sauri Primary&lt;/div&gt;&lt;div class=&quot;cell rd&quot;&gt;14%&lt;/div&gt;&lt;div class=&quot;cell rd&quot;&gt;1%&lt;/div&gt;&lt;/div&gt;
+            &lt;div class=&quot;mr&quot;&gt;&lt;div class=&quot;nm&quot;&gt;C&amp;amp;S Basic School Idere&lt;/div&gt;&lt;div class=&quot;cell am&quot;&gt;59%&lt;/div&gt;&lt;div class=&quot;cell rd&quot;&gt;0%&lt;/div&gt;&lt;/div&gt;
+            &lt;div class=&quot;mr&quot;&gt;&lt;div class=&quot;nm&quot;&gt;Baptist Basic, Iluaje&lt;/div&gt;&lt;div class=&quot;cell gr&quot;&gt;91%&lt;/div&gt;&lt;div class=&quot;cell rd&quot;&gt;0%&lt;/div&gt;&lt;/div&gt;
+          &lt;/div&gt;
+          &lt;div class=&quot;kite&quot;&gt;The &lt;b&gt;School Monitor&lt;/b&gt; — a tool &lt;b&gt;inside&lt;/b&gt; this activity, not a separate tab. The same view appears in Insights. Role-neutral name on purpose: a reusable dashboard isn&#x27;t owned by the QAO.&lt;/div&gt;
+        &lt;/div&gt;
+        &lt;div class=&quot;pane&quot; data-p=&quot;planner&quot;&gt;
+          &lt;div class=&quot;field&quot;&gt;&lt;b&gt;Week of&lt;/b&gt;Mon 21 Jul – Fri 25 Jul 2026&amp;nbsp; ▾&lt;/div&gt;
+          &lt;div class=&quot;field&quot; style=&quot;border-style:dashed&quot;&gt;With guidance from the &lt;b&gt;Head of Department&lt;/b&gt;, choose this week&#x27;s priority schools. The School Monitor tab ranks them for you.&lt;/div&gt;
+          &lt;div class=&quot;lead&quot; style=&quot;margin-top:2px&quot;&gt;Priority schools&lt;/div&gt;
+          &lt;div class=&quot;field&quot;&gt;&lt;b&gt;1 · highest priority&lt;/b&gt;Danja Model Primary&amp;nbsp; ▾&lt;/div&gt;
+          &lt;div class=&quot;field&quot;&gt;&lt;b&gt;2&lt;/b&gt;Kofar Sauri Primary&amp;nbsp; ▾&lt;/div&gt;
+          &lt;div class=&quot;field&quot;&gt;&lt;b&gt;3&lt;/b&gt;Select school name&amp;nbsp; ▾&lt;/div&gt;
+          &lt;div class=&quot;field&quot;&gt;&lt;b&gt;4&lt;/b&gt;Select school name&amp;nbsp; ▾&lt;/div&gt;
+          &lt;div class=&quot;lead&quot; style=&quot;margin-top:2px&quot;&gt;Backup schools&lt;/div&gt;
+          &lt;div class=&quot;field&quot;&gt;&lt;b&gt;5 · if a priority school is unreachable&lt;/b&gt;Select school name&amp;nbsp; ▾&lt;/div&gt;
+          &lt;div class=&quot;field&quot;&gt;&lt;b&gt;6&lt;/b&gt;Select school name&amp;nbsp; ▾&lt;/div&gt;
+          &lt;button class=&quot;btn&quot;&gt;Save weekly plan&lt;/button&gt;
+          &lt;div class=&quot;kite&quot;&gt;The real &quot;School visit planner&quot;. School pickers list schools of type &lt;i&gt;School&lt;/i&gt;, scoped to the QAO&#x27;s access — the entity-selector Krste flagged. Top slots pre-filled from the School Monitor&#x27;s ranking, so the dashboard feeds the form.&lt;/div&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+      &lt;div class=&quot;tagwrap t-tabs&quot;&gt;&lt;div class=&quot;tagpill&quot;&gt;A dashboard living INSIDE an activity&lt;/div&gt;&lt;/div&gt;
+    &lt;/div&gt;
+
+    &lt;div class=&quot;view&quot; data-screen=&quot;obs-pick&quot;&gt;
+      &lt;div class=&quot;appbar&quot;&gt;&lt;div class=&quot;avatar&quot;&gt;M&lt;/div&gt;&lt;div class=&quot;who&quot;&gt;&lt;div class=&quot;hi&quot;&gt;Lesson observation&lt;/div&gt;&lt;div class=&quot;sub&quot;&gt;Pick a school in your zone&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;
+      &lt;div class=&quot;body&quot;&gt;
+        &lt;div class=&quot;lead&quot;&gt;Danja zone · schools&lt;/div&gt;
+        &lt;div class=&quot;row&quot; onclick=&quot;go(this,&#x27;obs&#x27;)&quot;&gt;&lt;div class=&quot;rc&quot;&gt;DM&lt;/div&gt;&lt;div class=&quot;rl&quot;&gt;&lt;b&gt;Danja Model Primary&lt;/b&gt;&lt;span&gt;Amina Sani · head teacher&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;chev&quot;&gt;›&lt;/div&gt;&lt;/div&gt;
+        &lt;div class=&quot;row&quot; onclick=&quot;go(this,&#x27;obs&#x27;)&quot;&gt;&lt;div class=&quot;rc&quot;&gt;KS&lt;/div&gt;&lt;div class=&quot;rl&quot;&gt;&lt;b&gt;Kofar Sauri Primary&lt;/b&gt;&lt;span&gt;Hauwa Musa · head teacher&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;chev&quot;&gt;›&lt;/div&gt;&lt;/div&gt;
+        &lt;div class=&quot;kite&quot;&gt;Same activity as Amina&#x27;s — but the picker reaches the whole &lt;b&gt;zone&lt;/b&gt;, not one school. The selector widened; the activity didn&#x27;t change.&lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+
+    &lt;div class=&quot;view&quot; data-screen=&quot;obs&quot;&gt;
+      &lt;div class=&quot;actbar&quot;&gt;&lt;div class=&quot;crumb&quot;&gt;&lt;span class=&quot;bk&quot; onclick=&quot;go(this,&#x27;obs-pick&#x27;)&quot;&gt;‹ Schools&lt;/span&gt; &lt;span&gt;›&lt;/span&gt; &lt;b&gt;Danja Model Primary&lt;/b&gt;&lt;/div&gt;
+        &lt;div class=&quot;tabs&quot;&gt;&lt;div class=&quot;tab on&quot; onclick=&quot;tab(this,&#x27;observe&#x27;)&quot;&gt;Observation tool&lt;/div&gt;&lt;div class=&quot;tab&quot; onclick=&quot;tab(this,&#x27;lesson&#x27;)&quot;&gt;Lesson&lt;/div&gt;&lt;div class=&quot;tab&quot; onclick=&quot;tab(this,&#x27;reports&#x27;)&quot;&gt;Reports&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;
+      &lt;div class=&quot;body&quot;&gt;
+        &lt;div class=&quot;pane on&quot; data-p=&quot;observe&quot;&gt;
+          &lt;div class=&quot;field&quot;&gt;&lt;b&gt;School&lt;/b&gt;Danja Model Primary&lt;/div&gt;
+          &lt;div class=&quot;qlabel&quot;&gt;At the school?&lt;/div&gt;
+          &lt;div class=&quot;opts&quot;&gt;&lt;span class=&quot;opt sel&quot;&gt;Yes&lt;/span&gt;&lt;span class=&quot;opt&quot;&gt;No&lt;/span&gt;&lt;/div&gt;
+          &lt;div class=&quot;field&quot;&gt;&lt;b&gt;📍 Location&lt;/b&gt;Captured&lt;/div&gt;
+          &lt;div class=&quot;qlabel&quot;&gt;Grade&lt;/div&gt;
+          &lt;div class=&quot;opts&quot;&gt;&lt;span class=&quot;opt&quot;&gt;P1&lt;/span&gt;&lt;span class=&quot;opt sel&quot;&gt;P2&lt;/span&gt;&lt;span class=&quot;opt&quot;&gt;P3&lt;/span&gt;&lt;/div&gt;
+          &lt;div class=&quot;qlabel&quot;&gt;Class arm&lt;/div&gt;
+          &lt;div class=&quot;opts&quot;&gt;&lt;span class=&quot;opt sel&quot;&gt;A&lt;/span&gt;&lt;span class=&quot;opt&quot;&gt;B&lt;/span&gt;&lt;span class=&quot;opt&quot;&gt;C&lt;/span&gt;&lt;span class=&quot;opt&quot;&gt;D&lt;/span&gt;&lt;/div&gt;
+          &lt;div class=&quot;field&quot;&gt;&lt;b&gt;Learners present&lt;/b&gt;Boys 14 · Girls 16&lt;/div&gt;
+          &lt;div class=&quot;qlabel&quot;&gt;What are you observing?&lt;/div&gt;
+          &lt;div class=&quot;opts&quot;&gt;&lt;span class=&quot;opt sel&quot;&gt;English — Let&#x27;s Read&lt;/span&gt;&lt;span class=&quot;opt&quot;&gt;Yoruba&lt;/span&gt;&lt;span class=&quot;opt&quot;&gt;DPL status&lt;/span&gt;&lt;/div&gt;
+          &lt;div class=&quot;qlabel&quot;&gt;Phonics — effectiveness (1–4)&lt;/div&gt;
+          &lt;div class=&quot;opts&quot;&gt;&lt;span class=&quot;opt&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;opt&quot;&gt;2&lt;/span&gt;&lt;span class=&quot;opt sel&quot;&gt;3&lt;/span&gt;&lt;span class=&quot;opt&quot;&gt;4&lt;/span&gt;&lt;/div&gt;
+          &lt;div class=&quot;field&quot;&gt;&lt;b&gt;What did the teacher do well?&lt;/b&gt;Strengths…&lt;/div&gt;
+          &lt;div class=&quot;field&quot;&gt;&lt;b&gt;Areas to support&lt;/b&gt;Improvements…&lt;/div&gt;
+          &lt;button class=&quot;btn&quot;&gt;Save observation&lt;/button&gt;
+          &lt;div class=&quot;kite&quot;&gt;The &lt;b&gt;same&lt;/b&gt; lesson observation form Amina uses (the head-teacher tab) — school picked on the previous screen, the &lt;b&gt;class&lt;/b&gt; is grade + arm captured here. One activity, one rung up.&lt;/div&gt;
+        &lt;/div&gt;
+        &lt;!-- THE PAYOFF: reuse + upward visibility --&gt;
+        &lt;div class=&quot;pane&quot; data-p=&quot;reports&quot;&gt;
+          &lt;div class=&quot;lead&quot;&gt;Lesson observation reports · Danja zone&lt;/div&gt;
+          &lt;div class=&quot;qviz&quot;&gt;&lt;div class=&quot;qt&quot;&gt;What was observed&lt;/div&gt;
+            &lt;div class=&quot;hbar&quot;&gt;&lt;span class=&quot;hl&quot;&gt;English&lt;/span&gt;&lt;span class=&quot;track&quot;&gt;&lt;span class=&quot;fill&quot; style=&quot;width:64%&quot;&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;hv&quot;&gt;64%&lt;/span&gt;&lt;/div&gt;
+            &lt;div class=&quot;hbar&quot;&gt;&lt;span class=&quot;hl&quot;&gt;Yoruba&lt;/span&gt;&lt;span class=&quot;track&quot;&gt;&lt;span class=&quot;fill&quot; style=&quot;width:24%&quot;&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;hv&quot;&gt;24%&lt;/span&gt;&lt;/div&gt;
+            &lt;div class=&quot;hbar&quot;&gt;&lt;span class=&quot;hl&quot;&gt;DPL status&lt;/span&gt;&lt;span class=&quot;track&quot;&gt;&lt;span class=&quot;fill&quot; style=&quot;width:12%&quot;&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;hv&quot;&gt;12%&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;
+          &lt;div class=&quot;qviz&quot;&gt;&lt;div class=&quot;qt&quot;&gt;Phonics effectiveness (1–4)&lt;/div&gt;
+            &lt;div class=&quot;hbar&quot;&gt;&lt;span class=&quot;hl&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;track&quot;&gt;&lt;span class=&quot;fill&quot; style=&quot;width:10%&quot;&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;hv&quot;&gt;10%&lt;/span&gt;&lt;/div&gt;
+            &lt;div class=&quot;hbar&quot;&gt;&lt;span class=&quot;hl&quot;&gt;2&lt;/span&gt;&lt;span class=&quot;track&quot;&gt;&lt;span class=&quot;fill&quot; style=&quot;width:34%&quot;&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;hv&quot;&gt;34%&lt;/span&gt;&lt;/div&gt;
+            &lt;div class=&quot;hbar&quot;&gt;&lt;span class=&quot;hl&quot;&gt;3&lt;/span&gt;&lt;span class=&quot;track&quot;&gt;&lt;span class=&quot;fill&quot; style=&quot;width:41%&quot;&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;hv&quot;&gt;41%&lt;/span&gt;&lt;/div&gt;
+            &lt;div class=&quot;hbar&quot;&gt;&lt;span class=&quot;hl&quot;&gt;4&lt;/span&gt;&lt;span class=&quot;track&quot;&gt;&lt;span class=&quot;fill&quot; style=&quot;width:15%&quot;&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;hv&quot;&gt;15%&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;
+          &lt;div class=&quot;qviz&quot;&gt;&lt;div class=&quot;qt&quot;&gt;By school — one level down &lt;span style=&quot;font-weight:400;color:var(--muted)&quot;&gt;(tap to drill in)&lt;/span&gt;&lt;/div&gt;
+            &lt;div class=&quot;hbar drill&quot; onclick=&quot;drill(this)&quot;&gt;&lt;span class=&quot;hl&quot;&gt;Danja Model&lt;/span&gt;&lt;span class=&quot;track&quot;&gt;&lt;span class=&quot;fill&quot; style=&quot;width:70%&quot;&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;hv&quot;&gt;12 ›&lt;/span&gt;&lt;/div&gt;
+            &lt;div class=&quot;drillpanel&quot;&gt;
+              &lt;div class=&quot;subrow hl&quot;&gt;&lt;div class=&quot;av&quot;&gt;A&lt;/div&gt;&lt;div class=&quot;sl&quot;&gt;&lt;b&gt;Primary 2 · A — 12 Jul&lt;/b&gt;&lt;span&gt;by Amina Sani · Head teacher&lt;/span&gt;&lt;/div&gt;&lt;span class=&quot;amina-tag&quot;&gt;from Amina&lt;/span&gt;&lt;/div&gt;
+              &lt;div class=&quot;subrow&quot;&gt;&lt;div class=&quot;av&quot;&gt;A&lt;/div&gt;&lt;div class=&quot;sl&quot;&gt;&lt;b&gt;Primary 1 · B — 10 Jul&lt;/b&gt;&lt;span&gt;by Amina Sani · Head teacher&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;
+              &lt;div class=&quot;note-sm&quot;&gt;Amina&#x27;s individual submissions — a QAO&#x27;s access reaches head teachers. Teacher level below stays aggregated.&lt;/div&gt;
+            &lt;/div&gt;
+            &lt;div class=&quot;hbar drill&quot; onclick=&quot;drill(this)&quot;&gt;&lt;span class=&quot;hl&quot;&gt;Kofar Sauri&lt;/span&gt;&lt;span class=&quot;track&quot;&gt;&lt;span class=&quot;fill&quot; style=&quot;width:47%&quot;&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;hv&quot;&gt;8 ›&lt;/span&gt;&lt;/div&gt;
+            &lt;div class=&quot;drillpanel&quot;&gt;
+              &lt;div class=&quot;subrow&quot;&gt;&lt;div class=&quot;av&quot;&gt;H&lt;/div&gt;&lt;div class=&quot;sl&quot;&gt;&lt;b&gt;Primary 3 · A — 9 Jul&lt;/b&gt;&lt;span&gt;by Hauwa Musa · Head teacher&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;
+              &lt;div class=&quot;note-sm&quot;&gt;Hauwa&#x27;s individual submissions — one level down.&lt;/div&gt;
+            &lt;/div&gt;&lt;/div&gt;
+          &lt;div class=&quot;kite&quot;&gt;Aggregate by default — a form-response summary. Tap a school to drill to the head teacher&#x27;s &lt;b&gt;individual&lt;/b&gt; submissions — because a QAO&#x27;s &lt;b&gt;data access&lt;/b&gt; reaches head teachers. A Fellow at the same zone would see only the aggregate. Drill is gated by access, not a fixed level. Own submissions always.&lt;/div&gt;
+        &lt;/div&gt;
+        &lt;div class=&quot;pane&quot; data-p=&quot;lesson&quot;&gt;
+          &lt;div class=&quot;grouplbl&quot;&gt;Lesson of the day&lt;/div&gt;
+          &lt;div class=&quot;lesson l-math&quot;&gt;&lt;div class=&quot;rad&quot;&gt;&lt;/div&gt;&lt;b&gt;Mathematics&lt;small&gt;Week 1 · Day 1 — what&#x27;s being taught&lt;/small&gt;&lt;/b&gt;&lt;div class=&quot;lic&quot;&gt;🔢&lt;/div&gt;&lt;/div&gt;
+          &lt;div class=&quot;kite&quot;&gt;Same context tool as Amina&#x27;s lesson observation activity.&lt;/div&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+
+    &lt;div class=&quot;view&quot; data-screen=&quot;coach-pick&quot;&gt;
+      &lt;div class=&quot;appbar&quot;&gt;&lt;div class=&quot;avatar&quot;&gt;M&lt;/div&gt;&lt;div class=&quot;who&quot;&gt;&lt;div class=&quot;hi&quot;&gt;Coaching&lt;/div&gt;&lt;div class=&quot;sub&quot;&gt;Select the school you visited&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;
+      &lt;div class=&quot;body&quot;&gt;
+        &lt;div class=&quot;lead&quot;&gt;Danja zone · schools&lt;/div&gt;
+        &lt;div class=&quot;row&quot; onclick=&quot;go(this,&#x27;coach&#x27;)&quot;&gt;&lt;div class=&quot;rc&quot;&gt;DM&lt;/div&gt;&lt;div class=&quot;rl&quot;&gt;&lt;b&gt;Danja Model Primary&lt;/b&gt;&lt;span&gt;Coachee: Amina Sani · head teacher&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;chev&quot;&gt;›&lt;/div&gt;&lt;/div&gt;
+        &lt;div class=&quot;row&quot; onclick=&quot;go(this,&#x27;coach&#x27;)&quot;&gt;&lt;div class=&quot;rc&quot;&gt;KS&lt;/div&gt;&lt;div class=&quot;rl&quot;&gt;&lt;b&gt;Kofar Sauri Primary&lt;/b&gt;&lt;span&gt;Coachee: Hauwa Musa · head teacher&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;chev&quot;&gt;›&lt;/div&gt;&lt;/div&gt;
+        &lt;div class=&quot;kite&quot;&gt;Same &quot;select school&quot; opening as lesson observation and the visit form. The coachee is the school&#x27;s &lt;b&gt;head teacher&lt;/b&gt;.&lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+
+    &lt;div class=&quot;view&quot; data-screen=&quot;coach&quot;&gt;
+      &lt;div class=&quot;actbar&quot;&gt;&lt;div class=&quot;crumb&quot;&gt;&lt;span class=&quot;bk&quot; onclick=&quot;go(this,&#x27;coach-pick&#x27;)&quot;&gt;‹ Schools&lt;/span&gt; &lt;span&gt;›&lt;/span&gt; &lt;b&gt;Danja Model Primary&lt;/b&gt;&lt;/div&gt;
+        &lt;div class=&quot;tabs&quot;&gt;&lt;div class=&quot;tab on&quot; onclick=&quot;tab(this,&#x27;session&#x27;)&quot;&gt;Session&lt;/div&gt;&lt;div class=&quot;tab&quot; onclick=&quot;tab(this,&#x27;reports&#x27;)&quot;&gt;Reports&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;
+      &lt;div class=&quot;body&quot;&gt;
+        &lt;div class=&quot;pane on&quot; data-p=&quot;session&quot;&gt;
+          &lt;div class=&quot;field&quot;&gt;&lt;b&gt;Coachee&lt;/b&gt;Amina Sani · Head teacher&lt;/div&gt;
+          &lt;div class=&quot;qlabel&quot;&gt;At the school?&lt;/div&gt;
+          &lt;div class=&quot;opts&quot;&gt;&lt;span class=&quot;opt&quot;&gt;Yes&lt;/span&gt;&lt;span class=&quot;opt sel&quot;&gt;No&lt;/span&gt;&lt;/div&gt;
+          &lt;div class=&quot;qlabel&quot;&gt;How are you collecting this?&lt;/div&gt;
+          &lt;div class=&quot;opts&quot;&gt;&lt;span class=&quot;opt sel&quot;&gt;Phone call&lt;/span&gt;&lt;span class=&quot;opt&quot;&gt;WhatsApp&lt;/span&gt;&lt;span class=&quot;opt&quot;&gt;In person elsewhere&lt;/span&gt;&lt;/div&gt;
+          &lt;div class=&quot;lead&quot; style=&quot;margin-top:6px&quot;&gt;Head teacher support&lt;/div&gt;
+          &lt;div class=&quot;qlabel&quot;&gt;Did the HT use the lesson observation tool?&lt;/div&gt;
+          &lt;div class=&quot;opts&quot;&gt;&lt;span class=&quot;opt sel&quot;&gt;Yes&lt;/span&gt;&lt;span class=&quot;opt&quot;&gt;No&lt;/span&gt;&lt;/div&gt;
+          &lt;div class=&quot;qlabel&quot;&gt;Did the HT give feedback to the teacher after observing?&lt;/div&gt;
+          &lt;div class=&quot;opts&quot;&gt;&lt;span class=&quot;opt sel&quot;&gt;Yes&lt;/span&gt;&lt;span class=&quot;opt&quot;&gt;No&lt;/span&gt;&lt;/div&gt;
+          &lt;div class=&quot;qlabel&quot;&gt;Rate the HT&#x27;s feedback to the teacher (1–4)&lt;/div&gt;
+          &lt;div class=&quot;opts&quot;&gt;&lt;span class=&quot;opt&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;opt sel&quot;&gt;2&lt;/span&gt;&lt;span class=&quot;opt&quot;&gt;3&lt;/span&gt;&lt;span class=&quot;opt&quot;&gt;4&lt;/span&gt;&lt;/div&gt;
+          &lt;div class=&quot;field&quot;&gt;&lt;b&gt;Feedback to the head teacher&lt;/b&gt;What did you advise?…&lt;/div&gt;
+          &lt;div class=&quot;field&quot;&gt;&lt;b&gt;What does the HT need training on?&lt;/b&gt;…&lt;/div&gt;
+          &lt;button class=&quot;btn&quot;&gt;Save coaching session&lt;/button&gt;
+          &lt;div class=&quot;kite&quot;&gt;&lt;b&gt;Off-site&lt;/b&gt; here (phone) — coaching isn&#x27;t always at a visit, which is why it&#x27;s its own activity, not folded into a visit. And it coaches Amina on how well she runs the &lt;b&gt;lesson observation activity&lt;/b&gt; — coaching is meta-observation.&lt;/div&gt;
+        &lt;/div&gt;
+        &lt;div class=&quot;pane&quot; data-p=&quot;reports&quot;&gt;
+          &lt;div class=&quot;lead&quot;&gt;Coaching reports · Danja zone&lt;/div&gt;
+          &lt;div class=&quot;qviz&quot;&gt;&lt;div class=&quot;qt&quot;&gt;Did the HT use the lesson observation tool?&lt;/div&gt;
+            &lt;div class=&quot;hbar&quot;&gt;&lt;span class=&quot;hl&quot;&gt;Yes&lt;/span&gt;&lt;span class=&quot;track&quot;&gt;&lt;span class=&quot;fill&quot; style=&quot;width:62%&quot;&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;hv&quot;&gt;62%&lt;/span&gt;&lt;/div&gt;
+            &lt;div class=&quot;hbar&quot;&gt;&lt;span class=&quot;hl&quot;&gt;No&lt;/span&gt;&lt;span class=&quot;track&quot;&gt;&lt;span class=&quot;fill&quot; style=&quot;width:38%&quot;&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;hv&quot;&gt;38%&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;
+          &lt;div class=&quot;qviz&quot;&gt;&lt;div class=&quot;qt&quot;&gt;HT feedback to teacher — rating (1–4)&lt;/div&gt;
+            &lt;div class=&quot;hbar&quot;&gt;&lt;span class=&quot;hl&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;track&quot;&gt;&lt;span class=&quot;fill&quot; style=&quot;width:14%&quot;&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;hv&quot;&gt;14%&lt;/span&gt;&lt;/div&gt;
+            &lt;div class=&quot;hbar&quot;&gt;&lt;span class=&quot;hl&quot;&gt;2&lt;/span&gt;&lt;span class=&quot;track&quot;&gt;&lt;span class=&quot;fill&quot; style=&quot;width:48%&quot;&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;hv&quot;&gt;48%&lt;/span&gt;&lt;/div&gt;
+            &lt;div class=&quot;hbar&quot;&gt;&lt;span class=&quot;hl&quot;&gt;3&lt;/span&gt;&lt;span class=&quot;track&quot;&gt;&lt;span class=&quot;fill&quot; style=&quot;width:30%&quot;&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;hv&quot;&gt;30%&lt;/span&gt;&lt;/div&gt;
+            &lt;div class=&quot;hbar&quot;&gt;&lt;span class=&quot;hl&quot;&gt;4&lt;/span&gt;&lt;span class=&quot;track&quot;&gt;&lt;span class=&quot;fill&quot; style=&quot;width:8%&quot;&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;hv&quot;&gt;8%&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;
+          &lt;div class=&quot;kite&quot;&gt;Aggregated coaching data across the zone — the same form-summary primitive, on the coaching form&#x27;s submissions. QAO-specific: Amina has no coaching tile.&lt;/div&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+
+    &lt;div class=&quot;view&quot; data-screen=&quot;insights&quot;&gt;
+      &lt;div class=&quot;appbar&quot;&gt;&lt;div class=&quot;avatar&quot;&gt;M&lt;/div&gt;&lt;div class=&quot;who&quot;&gt;&lt;div class=&quot;hi&quot;&gt;Insights&lt;/div&gt;&lt;div class=&quot;sub&quot;&gt;Dashboards you can see&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;
+      &lt;div class=&quot;body&quot;&gt;
+        &lt;div class=&quot;dash&quot;&gt;&lt;h4&gt;School Monitor&lt;/h4&gt;&lt;div class=&quot;scope&quot;&gt;Scope: Danja zone&lt;/div&gt;
+          &lt;div class=&quot;mini-legend&quot;&gt;&lt;span&gt;&lt;i style=&quot;background:#e08a8a&quot;&gt;&lt;/i&gt;% Low SP&lt;/span&gt;&lt;span&gt;&lt;i style=&quot;background:#ecd98a&quot;&gt;&lt;/i&gt;% Low DPL&lt;/span&gt;&lt;span&gt;&lt;i style=&quot;background:#9fd396&quot;&gt;&lt;/i&gt;% on Track&lt;/span&gt;&lt;/div&gt;
+          &lt;div class=&quot;mbars&quot;&gt;&lt;div class=&quot;mb&quot;&gt;&lt;b&gt;68%&lt;/b&gt;&lt;div class=&quot;col&quot; style=&quot;height:68%;background:#ecd98a&quot;&gt;&lt;/div&gt;&lt;span&gt;Low DPL&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;mb&quot;&gt;&lt;b&gt;82%&lt;/b&gt;&lt;div class=&quot;col&quot; style=&quot;height:82%;background:#e08a8a&quot;&gt;&lt;/div&gt;&lt;span&gt;Low SP&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;mb&quot;&gt;&lt;b&gt;0%&lt;/b&gt;&lt;div class=&quot;col&quot; style=&quot;height:2%;background:#9fd396&quot;&gt;&lt;/div&gt;&lt;span&gt;on Track&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;
+        &lt;div class=&quot;dash&quot;&gt;&lt;h4&gt;Lesson observation reports&lt;/h4&gt;&lt;div class=&quot;scope&quot;&gt;Scope: Danja zone&lt;/div&gt;
+          &lt;div class=&quot;hbar&quot;&gt;&lt;span class=&quot;hl&quot;&gt;English&lt;/span&gt;&lt;span class=&quot;track&quot;&gt;&lt;span class=&quot;fill&quot; style=&quot;width:64%&quot;&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;hv&quot;&gt;64%&lt;/span&gt;&lt;/div&gt;
+          &lt;div class=&quot;hbar&quot;&gt;&lt;span class=&quot;hl&quot;&gt;Yoruba&lt;/span&gt;&lt;span class=&quot;track&quot;&gt;&lt;span class=&quot;fill&quot; style=&quot;width:24%&quot;&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;hv&quot;&gt;24%&lt;/span&gt;&lt;/div&gt;
+          &lt;div class=&quot;hbar&quot;&gt;&lt;span class=&quot;hl&quot;&gt;DPL&lt;/span&gt;&lt;span class=&quot;track&quot;&gt;&lt;span class=&quot;fill&quot; style=&quot;width:12%&quot;&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;hv&quot;&gt;12%&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;
+        &lt;div class=&quot;dash&quot;&gt;&lt;h4&gt;Coaching reports&lt;/h4&gt;&lt;div class=&quot;scope&quot;&gt;Scope: Danja zone&lt;/div&gt;
+          &lt;div class=&quot;hbar&quot;&gt;&lt;span class=&quot;hl&quot;&gt;HT used tool&lt;/span&gt;&lt;span class=&quot;track&quot;&gt;&lt;span class=&quot;fill&quot; style=&quot;width:62%&quot;&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;hv&quot;&gt;62%&lt;/span&gt;&lt;/div&gt;
+          &lt;div class=&quot;hbar&quot;&gt;&lt;span class=&quot;hl&quot;&gt;Gave feedback&lt;/span&gt;&lt;span class=&quot;track&quot;&gt;&lt;span class=&quot;fill&quot; style=&quot;width:55%&quot;&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;hv&quot;&gt;55%&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;
+        &lt;div class=&quot;kite&quot;&gt;All the dashboards from your activities in one place, each scoped to your zone. The same reports also sit inside their activities. A head teacher sees these same dashboards at &lt;b&gt;school&lt;/b&gt; scope — the role difference is scope, not which dashboards.&lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+
+    &lt;div class=&quot;view&quot; data-screen=&quot;support&quot;&gt;
+      &lt;div class=&quot;appbar&quot;&gt;&lt;div class=&quot;avatar&quot;&gt;M&lt;/div&gt;&lt;div class=&quot;who&quot;&gt;&lt;div class=&quot;hi&quot;&gt;Support&lt;/div&gt;&lt;div class=&quot;sub&quot;&gt;Get help when something&#x27;s stuck&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;
+      &lt;div class=&quot;body&quot;&gt;&lt;div class=&quot;field&quot;&gt;&lt;b&gt;What&#x27;s happening?&lt;/b&gt;Describe the problem…&lt;/div&gt;&lt;button class=&quot;btn&quot;&gt;Send to support&lt;/button&gt;
+        &lt;div class=&quot;kite&quot;&gt;The &lt;b&gt;same&lt;/b&gt; Support tab as Amina&#x27;s — common to every role.&lt;/div&gt;&lt;/div&gt;
+    &lt;/div&gt;
+
+    &lt;div class=&quot;view&quot; data-screen=&quot;profile&quot;&gt;
+      &lt;div class=&quot;appbar&quot;&gt;&lt;div class=&quot;avatar&quot;&gt;M&lt;/div&gt;&lt;div class=&quot;who&quot;&gt;&lt;div class=&quot;hi&quot;&gt;Musa Danjuma&lt;/div&gt;&lt;div class=&quot;sub&quot;&gt;QAO · Danja zone&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;
+      &lt;div class=&quot;body&quot;&gt;&lt;div class=&quot;lead&quot;&gt;Your experience&lt;/div&gt;
+        &lt;div class=&quot;row&quot; style=&quot;cursor:default&quot;&gt;&lt;div class=&quot;rc&quot;&gt;QA&lt;/div&gt;&lt;div class=&quot;rl&quot;&gt;&lt;b&gt;QAO&lt;/b&gt;&lt;span&gt;Danja zone · active&lt;/span&gt;&lt;/div&gt;&lt;div style=&quot;color:var(--green);font-weight:700&quot;&gt;✓&lt;/div&gt;&lt;/div&gt;
+        &lt;div class=&quot;empty&quot;&gt;One role, one scope — nothing to switch.&lt;br&gt;Same empty switcher as Amina. Only a genuinely two-role user (Grace) would see options here.&lt;/div&gt;&lt;/div&gt;
+    &lt;/div&gt;
+
+    &lt;div class=&quot;shell&quot;&gt;
+      &lt;button class=&quot;on&quot; onclick=&quot;shellGo(this,&#x27;home&#x27;)&quot;&gt;&lt;svg class=&quot;gl&quot; viewBox=&quot;0 0 24 24&quot;&gt;&lt;path d=&quot;M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z&quot;/&gt;&lt;/svg&gt;Home&lt;/button&gt;
+      &lt;button onclick=&quot;shellGo(this,&#x27;insights&#x27;)&quot;&gt;&lt;svg class=&quot;gl&quot; viewBox=&quot;0 0 24 24&quot;&gt;&lt;line x1=&quot;6&quot; y1=&quot;20&quot; x2=&quot;6&quot; y2=&quot;13&quot;/&gt;&lt;line x1=&quot;12&quot; y1=&quot;20&quot; x2=&quot;12&quot; y2=&quot;4&quot;/&gt;&lt;line x1=&quot;18&quot; y1=&quot;20&quot; x2=&quot;18&quot; y2=&quot;9&quot;/&gt;&lt;/svg&gt;Insights&lt;/button&gt;
+      &lt;button onclick=&quot;shellGo(this,&#x27;support&#x27;)&quot;&gt;&lt;svg class=&quot;gl&quot; viewBox=&quot;0 0 24 24&quot;&gt;&lt;circle cx=&quot;12&quot; cy=&quot;12&quot; r=&quot;9&quot;/&gt;&lt;path d=&quot;M9.5 9a2.5 2.5 0 1 1 3 2.4c-.6.2-1 .8-1 1.6&quot;/&gt;&lt;/svg&gt;Support&lt;/button&gt;
+      &lt;button onclick=&quot;shellGo(this,&#x27;profile&#x27;)&quot;&gt;&lt;svg class=&quot;gl&quot; viewBox=&quot;0 0 24 24&quot;&gt;&lt;circle cx=&quot;12&quot; cy=&quot;8&quot; r=&quot;4&quot;/&gt;&lt;path d=&quot;M4 21v-1a6 6 0 0 1 12 0v1&quot;/&gt;&lt;/svg&gt;Profile&lt;/button&gt;
+    &lt;/div&gt;
+    &lt;div class=&quot;tagwrap t-shell&quot;&gt;&lt;div class=&quot;tagpill&quot;&gt;Shell — identical to Amina&#x27;s&lt;/div&gt;&lt;/div&gt;
+  &lt;/div&gt;&lt;/div&gt;
+
+  &lt;div class=&quot;notes&quot;&gt;
+    &lt;h2&gt;QAO — Teacher Supervisor&lt;/h2&gt;
+    &lt;div class=&quot;thesis&quot;&gt;Same shell as Amina. One role, one zone. Its Home shares &lt;b&gt;Lesson observation&lt;/b&gt; with the head teacher and adds its own activities (visit, coach). A role = some shared activities + some of its own.&lt;/div&gt;
+    &lt;div class=&quot;card&quot;&gt;&lt;div class=&quot;lbl&quot;&gt;This screen&lt;/div&gt;&lt;p class=&quot;noteText&quot;&gt;&lt;/p&gt;&lt;/div&gt;
+    &lt;div class=&quot;card&quot;&gt;&lt;div class=&quot;lbl&quot;&gt;The two things to land&lt;/div&gt;&lt;div class=&quot;legend&quot;&gt;
+      &lt;b&gt;Reuse&lt;/b&gt; — the lesson observation activity is the same one Amina has (forms rows 4/5: &quot;used by QAO and HT&quot;), just one rung up.&lt;br&gt;
+      &lt;b&gt;Access-gated visibility&lt;/b&gt; — Reports aggregate across the zone; drilling to an individual submission is gated by data access. A QAO reaches head-teacher submissions; a Fellow at the same zone sees only the aggregate; everyone sees their own. (Raw submissions are a far-off parent-app question.)&lt;/div&gt;&lt;/div&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;script&gt;
+  var NOTES = {
+    amina:{
+      home:&quot;Home. A teacher activity (&lt;b&gt;Teach a class&lt;/b&gt;) and a Teacher-Supervisor activity (&lt;b&gt;Lesson observation&lt;/b&gt;) side by side in one experience. Same scope — her school — so they merge, no switcher.&quot;,
+      &#x27;teach-pick&#x27;:&quot;Cover a class starts by &lt;b&gt;selecting&lt;/b&gt; an existing class. She can&#x27;t create or edit classes — those are define/manage powers this activity leaves out.&quot;,
+      teach:&quot;Inside the activity: the existing school-app &lt;b&gt;Teach&lt;/b&gt; screen dropped in unchanged, plus Learners and Progress as &lt;b&gt;top tabs&lt;/b&gt;. Shell stays at the bottom.&quot;,
+      &#x27;obs-pick&#x27;:&quot;Lesson observation captures which &lt;b&gt;class&lt;/b&gt; is being observed.&quot;,
+      obs:&quot;The lesson observation activity = Observation tool (submit) + Lesson (context) + Reports (see the data). The &lt;b&gt;same activity reappears in the QAO&lt;/b&gt; (the QAO tab) one rung up. Reports shows her own submissions, aggregated.&quot;,
+      insights:&quot;Insights = dashboards she can see, bounded by her school. The attendance &lt;b&gt;selector&lt;/b&gt; (&#x27;Whole school ▾&#x27;) is the same control that scopes progress to one class inside an activity.&quot;,
+      support:&quot;Support is common to every role. Identical to the QAO&#x27;s Support tab.&quot;,
+      profile:&quot;Profile is where roles switch. Amina has one role — nothing to switch. A teacher-plus-ECDO user would get a switcher, because switching separates different scopes.&quot;
+    },
+    qao:{
+      home:&quot;Same shell as Amina. Three activities: &lt;b&gt;Plan &amp;amp; visit&lt;/b&gt; and &lt;b&gt;Coaching&lt;/b&gt; are the QAO&#x27;s own; &lt;b&gt;Lesson observation&lt;/b&gt; is the same tile Amina has. A role is shared activities plus its own.&quot;,
+      plan:&quot;The &lt;b&gt;School Monitor&lt;/b&gt; lives &lt;b&gt;inside&lt;/b&gt; this activity as its tool — which schools to visit first. The Planner tab is the real visit-planner form, its school pickers scoped to the QAO&#x27;s access. Dashboards are primitives that sit inside activities, not only in a separate tab.&quot;,
+      &#x27;obs-pick&#x27;:&quot;Same lesson observation activity as Amina — but the picker reaches the whole &lt;b&gt;zone&lt;/b&gt;. The selector widened; the activity is unchanged.&quot;,
+      obs:&quot;The payoff. &lt;b&gt;Reports&lt;/b&gt; visualises the form&#x27;s submissions in aggregate across the zone; drilling to an individual submission is gated by data access — a QAO reaches head teachers, a Fellow at the same zone would not. Same activity as Amina&#x27;s, one rung up — reuse + access-gated visibility.&quot;,
+      &#x27;coach-pick&#x27;:&quot;Coaching is QAO-specific — she coaches head teachers one level down.&quot;,
+      coach:&quot;A QAO-only activity — Amina has no coaching tile. It happens &lt;b&gt;off-site&lt;/b&gt; as often as on (phone/WhatsApp), which is why it&#x27;s its own activity, not folded into a visit. And it coaches Amina on how well she runs the &lt;b&gt;lesson observation&lt;/b&gt; activity — coaching is meta-observation.&quot;,
+      insights:&quot;Insights = &lt;b&gt;all&lt;/b&gt; the dashboards from your activities — School Monitor, lesson observation reports, coaching reports — each scoped to your zone. The same reports sit inside their activities too. A head teacher sees these same dashboards at school scope; the role difference is &lt;b&gt;scope&lt;/b&gt;, not which dashboards.&quot;,
+      support:&quot;The same Support tab as Amina&#x27;s — common to every role.&quot;,
+      profile:&quot;Same empty switcher as Amina. One role, one scope, nothing to switch.&quot;
+    }
+  };
+  function drill(el){ var p=el.nextElementSibling; if(p&amp;&amp;p.classList.contains(&#x27;drillpanel&#x27;)){ p.classList.toggle(&#x27;open&#x27;); el.classList.toggle(&#x27;open&#x27;); } }
+  function panelOf(el){ return el.closest(&#x27;.tabpanel&#x27;); }
+  function personaOf(el){ return panelOf(el).dataset.persona; }
+  function setNote(el,screen){ var p=panelOf(el); p.querySelector(&#x27;.noteText&#x27;).innerHTML = (NOTES[p.dataset.persona]||{})[screen]||&#x27;&#x27;; }
+  function showIn(panel,screen){
+    panel.querySelectorAll(&#x27;.view&#x27;).forEach(v=&gt;v.classList.toggle(&#x27;active&#x27;, v.dataset.screen===screen));
+    panel.querySelectorAll(&#x27;.body&#x27;).forEach(b=&gt;b.scrollTop=0);
+  }
+  function shellGo(btn,screen){ var p=panelOf(btn); showIn(p,screen); p.querySelectorAll(&#x27;.shell button&#x27;).forEach(b=&gt;b.classList.remove(&#x27;on&#x27;)); btn.classList.add(&#x27;on&#x27;); setNote(btn,screen); }
+  function shellGo2(btn,screen){ var p=panelOf(btn); showIn(p,screen); p.querySelectorAll(&#x27;.shell button&#x27;).forEach(b=&gt;b.classList.remove(&#x27;on&#x27;)); p.querySelector(&#x27;.shell button&#x27;).classList.add(&#x27;on&#x27;); setNote(btn,screen); }
+  function go(btn,screen){ showIn(panelOf(btn),screen); setNote(btn,screen); }
+  function tab(btn,name){ var v=btn.closest(&#x27;.view&#x27;); v.querySelectorAll(&#x27;.tab&#x27;).forEach(t=&gt;t.classList.remove(&#x27;on&#x27;)); btn.classList.add(&#x27;on&#x27;); v.querySelectorAll(&#x27;.pane&#x27;).forEach(p=&gt;p.classList.toggle(&#x27;on&#x27;,p.dataset.p===name)); v.querySelector(&#x27;.body&#x27;).scrollTop=0; }
+  function showTab(persona,btn){
+    document.querySelectorAll(&#x27;.tabpanel&#x27;).forEach(p=&gt;p.classList.toggle(&#x27;active&#x27;, p.dataset.persona===persona));
+    document.querySelectorAll(&#x27;.topbar .tabbtn&#x27;).forEach(b=&gt;b.classList.remove(&#x27;on&#x27;)); btn.classList.add(&#x27;on&#x27;);
+  }
+  function toggleAnnot(){ document.body.classList.toggle(&#x27;annot&#x27;); var b=document.getElementById(&#x27;annotBtn&#x27;),on=document.body.classList.contains(&#x27;annot&#x27;); b.classList.toggle(&#x27;on&#x27;,on); b.textContent=(on?&#x27;▣&#x27;:&#x27;◻&#x27;)+&#x27; Model notes on screen&#x27;; }
+  // init notes
+  document.querySelectorAll(&#x27;.tabpanel&#x27;).forEach(function(p){ p.querySelector(&#x27;.noteText&#x27;).innerHTML = NOTES[p.dataset.persona].home; });
+&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+"></iframe>
+  </div>
+<script>
+  function tabBtn(i){ return document.querySelectorAll('.tabbar button')[i]; }
+  function showTab(i,btn){
+    document.querySelectorAll('.tabbar button').forEach(function(b){b.classList.remove('on')});
+    if(btn) btn.classList.add('on');
+    document.querySelectorAll('.stage .pane, .stage iframe').forEach(function(el){
+      el.classList.toggle('on', el.getAttribute('data-i')==String(i));
+    });
+  }
+</script>
+</body>
+</html>
